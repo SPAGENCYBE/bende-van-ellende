@@ -35,7 +35,7 @@
   --bg:#14111d; --dot:#272038; --paper:#211c2f; --paper-2:#2b2540; --ink:#f4f0ff; --muted:#b5adcc;
   --line:#4a4065; --hair:#352e4a; --shade:#05030a; --ok:#5fe0a0; --warn:#ffb65c; --bad:#ff7a83;
   --ok-soft:#163626; --warn-soft:#3b2a12; --bad-soft:#3d1a20; --note:#f7e27a; color-scheme:dark }
-body[data-sec="home"]{--sec:var(--c-home)} body[data-sec="agenda"]{--sec:var(--c-agenda)} body[data-sec="huis"]{--sec:var(--c-huis)}
+body[data-sec="home"]{--sec:var(--c-home)} body[data-sec="babbel"]{--sec:var(--c-agenda)} body[data-sec="agenda"]{--sec:var(--c-agenda)} body[data-sec="huis"]{--sec:var(--c-huis)}
 body[data-sec="geld"]{--sec:var(--c-geld)} body[data-sec="admin"]{--sec:var(--c-admin)} body[data-sec="bende"]{--sec:var(--c-bende)}
 
 html,body{min-height:100%}
@@ -236,6 +236,47 @@ header.top{padding-top:calc(18px + env(safe-area-inset-top,0px))}
   nav.tabs button[aria-current="page"]{transform:rotate(-3deg)}
 }
 @media (pointer:coarse){ .check{width:34px;height:34px} .btn{padding:11px 18px} .btn.sm{padding:7px 13px} .row{padding:12px 0} }
+
+/* ---- babbels ---- */
+.chathead{margin-bottom:12px}
+.chat{padding:0;display:flex;flex-direction:column;overflow:hidden}
+.chatlog{height:420px;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;overscroll-behavior:contain}
+.daysep{text-align:center;margin:16px 0 6px}
+.daysep span{font-size:12px;font-weight:900;background:var(--paper-2);border:2px solid var(--line);border-radius:99px;padding:2px 12px;text-transform:capitalize}
+.msg{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+.msg.cont{margin-top:4px}
+.msg.me{justify-content:flex-end}
+.mav{width:30px;flex:none}
+.mb{display:flex;flex-direction:column;align-items:flex-start;max-width:min(80%,540px);min-width:0}
+.msg.me .mb{align-items:flex-end}
+.mname{font-size:12px;font-weight:900;margin:0 0 3px 6px;color:var(--muted)}
+.bubble{--mc:var(--c-home);background:var(--mc);color:#1c1530;border:2px solid var(--shade);border-radius:18px 18px 18px 6px;padding:8px 14px;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700;font-size:16px;box-shadow:2px 2px 0 var(--shade);max-width:100%;cursor:pointer}
+.msg.me .bubble{background:var(--paper);color:var(--ink);border-color:var(--line);border-radius:18px 18px 6px 18px}
+.msg.cont .bubble{border-radius:18px}
+.bubble.emo{background:none;border-color:transparent;box-shadow:none;font-size:42px;padding:0 4px;line-height:1.15}
+.msg.me .bubble.emo{background:none;border-color:transparent}
+@media (prefers-reduced-motion:no-preference){.msg:last-child .bubble{animation:pop .3s cubic-bezier(.3,1.6,.5,1)}}
+.mmeta{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted);font-weight:800;margin:4px 6px 0;flex-wrap:wrap}
+.react{border:2px solid var(--line);background:var(--paper);color:var(--ink);border-radius:99px;padding:0 8px;font-size:12px;font-weight:900}
+.react.on{background:var(--c-huis);color:#1c1530;border-color:var(--shade)}
+.composer{display:flex;gap:8px;align-items:center;padding:12px 14px 6px;border-top:var(--bw) solid var(--line);background:var(--paper-2)}
+.composer input[type=text]{flex:1;min-width:0;border-radius:99px;padding:10px 16px}
+.quickemo{display:flex;gap:2px;padding:2px 12px 10px 52px;background:var(--paper-2);overflow-x:auto;scrollbar-width:none}
+.quickemo button{border:0;background:none;font-size:22px;padding:2px 6px;border-radius:10px;transition:transform .12s}
+.quickemo button:hover{transform:scale(1.25) rotate(-8deg)}
+.whoask{padding:14px 16px;border-top:var(--bw) solid var(--line);background:var(--paper-2);font-weight:700}
+.chips-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pinbar{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.pin{display:flex;gap:10px;align-items:center;background:var(--note);color:#1c1530;border:var(--bw) solid var(--shade);border-radius:14px;padding:8px 12px;box-shadow:3px 3px 0 var(--shade);cursor:pointer;text-align:left;transform:rotate(-.4deg)}
+.pin .label{color:#1c1530}
+.pin .pt{font-weight:800;flex:1;min-width:0;overflow-wrap:anywhere}
+nav.tabs button{position:relative}
+.badge{position:absolute;top:0;right:4px;min-width:20px;height:20px;border-radius:99px;background:var(--bad);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center;border:2px solid var(--paper);padding:0 5px;line-height:1}
+.emo-row{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px}
+.emo-row button{font-size:28px;border:2px solid var(--line);background:var(--paper);border-radius:14px;padding:4px 10px;transition:transform .12s}
+.emo-row button:hover{transform:scale(1.12) rotate(-6deg)}
+.emo-row button.on{background:var(--c-huis);border-color:var(--shade)}
+.sheet-quote{font-weight:800;font-size:17px;background:var(--paper-2);border:2px solid var(--line);border-radius:14px;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 10px}
 </style>
 </head>
 <body data-sec="home">
@@ -288,16 +329,17 @@ const store = { get(k){ try { return localStorage.getItem(k); } catch { return n
 const COLORS = ["#a78bfa","#ff7eb6","#60a5fa","#34d399","#ff9a52","#ffd23f","#2dd4bf","#f87171"];
 const ICONS = {
   home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  babbel:'<path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/>',
   agenda:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   huis:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="19" cy="17" r="2"/>',
   geld:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 10v5M18 10v5"/>',
   admin:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
   bende:'<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20c.8-3.8 3.4-6 6.5-6s5.7 2.2 6.5 6M15 14.5c2.6 0 4.8 1.8 5.5 5"/>'
 };
-const TABS = [["home","Overzicht"],["agenda","Agenda"],["huis","Huishouden"],["geld","Geld"],["admin","Admin"],["bende","De bende"]];
+const TABS = [["home","Overzicht"],["babbel","Babbels"],["agenda","Agenda"],["huis","Huishouden"],["geld","Geld"],["admin","Admin"],["bende","De bende"]];
 
 // ---------- state ----------
-const COLS = ["members","events","tasks","shopping","expenses","costs","pots","docs","contacts"];
+const COLS = ["messages","members","events","tasks","shopping","expenses","costs","pots","docs","contacts"];
 const S = {}; COLS.forEach(c => S[c] = []);
 S.meta = { menu:{}, budget:{amount:0} };
 let mode = "loading", readOnly = false;
@@ -357,6 +399,14 @@ function sample(){
   S.pots = [{id:uid(),name:"Zomervakantie",target:2500,saved:900}];
   S.docs = [{id:uid(),title:"Identiteitskaart Lotte",kind:"Document",who:"m3",expires:addDays(t,40)},{id:uid(),title:"Garantie wasmachine",kind:"Garantie",who:"",expires:addDays(t,400)}];
   S.contacts = [{id:uid(),name:"Dr. Peeters",role:"Huisarts",phone:"053 12 34 56"}];
+  const H = 3600e3, n0 = Date.now();
+  S.messages = [
+    {id:uid(), text:"Zondag gaan we naar oma. Iedereen om 11 uur klaar!", from:"m2", at:n0-26*H, pinned:true},
+    {id:uid(), text:"Wie haalt Wout op na de training?", from:"m2", at:n0-3*H},
+    {id:uid(), text:"Ik doe het", from:"m1", at:n0-3*H+120e3, react:{"👍":["m2"]}},
+    {id:uid(), text:"Mag ik vrijdag bij Emma slapen?", from:"m3", at:n0-40*60e3},
+    {id:uid(), text:"🙏", from:"m3", at:n0-39*60e3}
+  ];
   S.meta = { menu:{ma:"Spaghetti",di:"Kip met rijst",wo:"Restjes",do:"Vis met puree",vr:"Frietjes",za:"Pizza",zo:"Stoofvlees"}, budget:{amount:1200} };
 }
 
@@ -380,7 +430,8 @@ function startSync(){
   if (syncing) return; syncing = true; mode = "db"; render();
   const {fs, fsM} = FB;
   const onErr = e => { if (e && e.code === "permission-denied") toast("Dit account heeft geen toegang. Controleer de UID in de Firestore-regels."); };
-  COLS.forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
+  fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
+  COLS.filter(c => c !== "messages").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
   ["menu","budget"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); render(); }, onErr));
 }
 function showLogin(){
@@ -413,12 +464,12 @@ function openPicker(){
   el.hidden = false;
 }
 let actx = null, soundOn = store.get("bve-sound") !== "0";
-function pling(){
+function pling(notes = [660, 880, 1320]){
   if (!soundOn) return;
   try {
     actx ||= new (window.AudioContext || window.webkitAudioContext)();
     const now = actx.currentTime;
-    [660, 880, 1320].forEach((f, i) => {
+    notes.forEach((f, i) => {
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = "triangle"; o.frequency.value = f;
       g.gain.setValueAtTime(0.0001, now + i * .08); g.gain.exponentialRampToValueAtTime(0.18, now + i * .08 + .02); g.gain.exponentialRampToValueAtTime(0.0001, now + i * .08 + .25);
@@ -426,6 +477,83 @@ function pling(){
     });
   } catch {}
 }
+// ---------- babbels (gezinschat) ----------
+const EMO = ["👍","❤️","😂","😮","🙏","🎉"];
+let lastMsgAt = null, chatDraft = "", chatStick = true;
+const chatSeen = () => +(store.get("bve-chat-seen") || 0);
+function onMessages(list){
+  list.sort((a, b) => (a.at || 0) - (b.at || 0));
+  S.messages = list;
+  const newest = list.length ? list[list.length - 1].at || 0 : 0;
+  if (lastMsgAt !== null) {
+    const fresh = list.filter(m => (m.at || 0) > lastMsgAt && m.from !== who);
+    if (fresh.length) {
+      const m = fresh[fresh.length - 1];
+      if (tab !== "babbel") toast(`${M(m.from)?.name || "Iemand"}: ${String(m.text || "").slice(0, 70)}`);
+      pling([880, 1175]);
+    }
+  }
+  lastMsgAt = Math.max(lastMsgAt || 0, newest);
+  render();
+}
+function sendMsg(text){
+  text = String(text || "").trim(); if (!text) return;
+  if (who === "all" || !M(who)) { toast("Kies eerst bovenaan wie je bent."); return; }
+  chatStick = true; chatDraft = "";
+  add("messages", {text: text.slice(0, 1000), from: who, at: Date.now(), pinned: false});
+  if (mode !== "db") lastMsgAt = Date.now();
+}
+function toggleReact(id, e){
+  if (who === "all" || !M(who)) { toast("Kies eerst bovenaan wie je bent."); return; }
+  const m = S.messages.find(x => x.id === id); if (!m) return;
+  const rx = JSON.parse(JSON.stringify(m.react || {})), ids = new Set(rx[e] || []);
+  ids.has(who) ? ids.delete(who) : ids.add(who);
+  if (ids.size) rx[e] = [...ids]; else delete rx[e];
+  upd("messages", id, {react: rx});
+}
+const isEmojiOnly = t => /^(\p{Extended_Pictographic}|\u200d|\ufe0f|\s){1,8}$/u.test(t || "") && /\p{Extended_Pictographic}/u.test(t || "");
+function dayLabel(day){ return day === today() ? "Vandaag" : day === addDays(today(), -1) ? "Gisteren" : fmtDay(day); }
+function msgsHtml(list){
+  let out = "", lastDay = "", lastFrom = "", lastAt = 0;
+  list.forEach(m => {
+    const d = new Date(m.at || 0), day = ds(d);
+    if (day !== lastDay) { out += `<div class="daysep"><span>${dayLabel(day)}</span></div>`; lastFrom = ""; }
+    const me = m.from === who, cont = m.from === lastFrom && (m.at - lastAt) < 5 * 60e3, snd = M(m.from);
+    const reacts = Object.entries(m.react || {}).filter(([, ids]) => ids && ids.length);
+    out += `<div class="msg ${me ? "me" : ""} ${cont ? "cont" : ""}">${me ? "" : `<div class="mav">${cont ? "" : avatar(snd)}</div>`}
+      <div class="mb">${!cont && !me ? `<div class="mname">${esc(snd?.name || "Iemand")}</div>` : ""}
+      <button class="bubble ${isEmojiOnly(m.text) ? "emo" : ""}" data-msg="${m.id}" style="--mc:${esc(snd?.color || "#c9c3dd")}">${esc(m.text)}${m.pinned ? '<span class="pinmark" title="Vastgezet"> 📌</span>' : ""}</button>
+      <div class="mmeta"><span class="num">${pad(d.getHours())}:${pad(d.getMinutes())}</span>${reacts.map(([e, ids]) => `<button class="react ${ids.includes(who) ? "on" : ""}" data-react="${m.id}|${e}" title="${esc(ids.map(i => M(i)?.name).filter(Boolean).join(", "))}">${e} ${ids.length}</button>`).join("")}</div></div></div>`;
+    lastDay = day; lastFrom = m.from; lastAt = m.at || 0;
+  });
+  return out;
+}
+function vChat(){
+  const me = who !== "all" ? M(who) : null, list = S.messages, pinned = list.filter(m => m.pinned);
+  return `<div class="sechead chathead"><h2>Babbels</h2><span class="s" style="color:var(--muted);font-weight:800">Tik op een bericht om te reageren of vast te zetten</span></div>
+  ${pinned.length ? `<div class="pinbar">${pinned.map(m => `<button class="pin" data-msg="${m.id}">${avatar(M(m.from))}<span class="pt">${esc(m.text)}</span><span class="label">Prikbord</span></button>`).join("")}</div>` : ""}
+  <div class="card chat"><div class="chatlog" id="chatlog">${list.length ? msgsHtml(list) : `<div class="empty" style="margin:auto">Nog geen berichten. Zeg eens hallo tegen de bende!</div>`}</div>
+  ${me ? `<form class="composer" id="cform">${avatar(me)}<input type="text" id="cmsg" value="${esc(chatDraft)}" placeholder="Bericht aan de bende…" autocomplete="off" maxlength="1000" enterkeyhint="send" aria-label="Bericht"><button class="btn">Stuur</button></form>
+    <div class="quickemo">${EMO.concat(["🍕","🚗","🏠"]).map(e => `<button type="button" data-qemo="${e}" aria-label="Stuur ${e}">${e}</button>`).join("")}</div>`
+  : `<div class="whoask"><b>Wie ben jij?</b> Kies je naam om mee te babbelen.<div class="chips-row">${S.members.map(m => `<button class="pchip" data-who="${m.id}">${avatar(m)}${esc(m.name)}</button>`).join("")}</div></div>`}</div>`;
+}
+function openMsg(id){
+  const m = S.messages.find(x => x.id === id); if (!m) return;
+  const snd = M(m.from), d = new Date(m.at || 0);
+  showSheet(`<h3><span>Bericht</span> van ${esc(snd?.name || "iemand")}</h3>
+    <p class="sheet-quote">${esc(m.text)}</p><p class="s" style="color:var(--muted);margin:-4px 0 12px;font-weight:700">${dayLabel(ds(d))} om ${pad(d.getHours())}:${pad(d.getMinutes())}</p>
+    ${who !== "all" && M(who) ? `<div class="emo-row">${EMO.map(e => `<button data-react="${m.id}|${e}" class="${(m.react?.[e] || []).includes(who) ? "on" : ""}" aria-label="Reageer met ${e}">${e}</button>`).join("")}</div>` : `<p class="s" style="font-weight:700">Kies bovenaan wie je bent om te reageren.</p>`}
+    <div class="actions"><button class="btn ghost" data-pin="${m.id}">${m.pinned ? "Van het prikbord halen" : "Op het prikbord zetten"}</button>${m.from === who ? `<button class="btn danger" data-delmsg="${m.id}">Verwijderen</button>` : ""}<div class="r"><button class="btn ghost" data-close>Sluiten</button></div></div>`);
+}
+function sizeChat(){
+  const log = $("#chatlog"); if (!log) return;
+  const top = log.getBoundingClientRect().top + window.scrollY;
+  const below = (log.parentElement.offsetHeight - log.offsetHeight) + 28;
+  const nav = matchMedia("(max-width:720px)").matches ? $("#tabs").offsetHeight : 0;
+  log.style.height = Math.max(300, window.innerHeight - top - below - nav) + "px";
+}
+window.addEventListener("resize", () => { if (tab === "babbel") sizeChat(); });
+
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; render(); });
 window.addEventListener("appinstalled", () => { deferredInstall = null; toast("Geïnstalleerd! Je vindt de Bende nu tussen je apps."); render(); });
@@ -445,9 +573,12 @@ function renderWall(){
     <div class="wall-grid">
       <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Vandaag</span></h3>${ev.length ? eventRows(ev) : empty("Niets gepland vandaag.")}
         ${nxt.length ? `<div class="label" style="margin-top:14px">Straks</div>${nxt.map(e => `<div class="row"><span class="time" style="width:auto;min-width:70px;text-transform:capitalize">${fmtDay(e.date)}</span><div class="grow t">${esc(e.title)}</div>${avs(e.who)}</div>`).join("")}` : ""}</div>
-      <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span></h3>${taskRows(tasks)}</div>
+      <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Babbels</span> <button class="link" data-tab="babbel">Naar de chat</button></h3>
+      ${S.messages.filter(m => m.pinned).slice(-2).map(m => `<button class="pin" data-msg="${m.id}" style="width:100%;margin-bottom:8px">${avatar(M(m.from))}<span class="pt">${esc(m.text)}</span></button>`).join("")}
+      ${S.messages.length ? `<div class="list">${S.messages.slice(-3).map(m => `<div class="row click" data-tab="babbel">${avatar(M(m.from))}<div class="grow"><div class="t" style="font-weight:700">${esc(String(m.text).slice(0, 90))}</div><div class="s">${esc(M(m.from)?.name || "Iemand")} · ${dayLabel(ds(new Date(m.at || 0)))}</div></div></div>`).join("")}</div>` : empty("Nog geen berichten.")}</div>
+    <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span></h3>${taskRows(tasks)}</div>
       <div class="card note"><h3><span class="tag">Vanavond eten we</span></h3><div class="big">${esc(S.meta.menu?.[dayKey] || "Nog een verrassing")}</div>
-        <div class="label" style="margin-top:14px">Boodschappen</div><div style="font-weight:800">${S.shopping.filter(x => !x.done).map(x => esc(x.item)).join(" · ") || "Niets nodig"}</div></div>
+        ${S.messages.some(m => m.pinned) ? `<div class="label" style="margin-top:14px">Prikbord</div>${S.messages.filter(m => m.pinned).slice(-3).map(m => `<div style="font-weight:800">${esc(M(m.from)?.name || "")}: ${esc(m.text)}</div>`).join("")}` : ""}<div class="label" style="margin-top:14px">Boodschappen</div><div style="font-weight:800">${S.shopping.filter(x => !x.done).map(x => esc(x.item)).join(" · ") || "Niets nodig"}</div></div>
     </div>`;
 }
 async function toggleWall(){
@@ -500,6 +631,9 @@ function allEvents(){
 
 // ---------- rendering ----------
 function render(){
+  const oldLog = $("#chatlog"), oldTop = oldLog ? oldLog.scrollTop : 0, atBottom = !oldLog || oldLog.scrollHeight - oldLog.scrollTop - oldLog.clientHeight < 90;
+  if (tab === "babbel" && mode !== "loading") store.set("bve-chat-seen", String(Date.now()));
+  const unread = S.messages.filter(m => (m.at || 0) > chatSeen() && m.from !== who).length;
   const ae = document.activeElement, keepId = ae && ae.id && ae.closest && ae.closest("#main") ? ae.id : null, keepVal = keepId ? ae.value : null;
   document.body.dataset.sec = tab;
   $("#today").textContent = fmtLong(today());
@@ -510,10 +644,12 @@ function render(){
   if (who !== "all" && !M(who) && mode !== "loading" && S.members.length) who = "all";
   $("#people").innerHTML = `<button class="pchip all" aria-pressed="${who==="all"}" data-who="all">Iedereen</button>` +
     S.members.map(m => `<button class="pchip" aria-pressed="${who===m.id}" data-who="${m.id}">${avatar(m)}${esc(m.name)}</button>`).join("");
-  $("#tabs").innerHTML = TABS.map(([k,l]) => `<button data-tab="${k}" ${tab===k?'aria-current="page"':""}><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${l}</button>`).join("");
-  const V = {home:vHome, agenda:vAgenda, huis:vHuis, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
+  $("#tabs").innerHTML = TABS.map(([k,l]) => `<button data-tab="${k}" ${tab===k?'aria-current="page"':""}><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${l}${k === "babbel" && unread && tab !== "babbel" ? `<span class="badge num">${unread > 9 ? "9+" : unread}</span>` : ""}</button>`).join("");
+  const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
+  const log = $("#chatlog");
+  if (log) { sizeChat(); log.scrollTop = (chatStick || atBottom) ? log.scrollHeight : oldTop; chatStick = false; }
 }
 
 const empty = (txt) => `<div class="empty">${txt}</div>`;
@@ -718,11 +854,16 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = fals
 
 // ---------- events ----------
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],#clearShop,#setBudget,[data-close],[data-close-bg]");
+  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
   if (!el) return;
   const d = el.dataset;
   if ("closeBg" in d) { if (e.target === el) closeSheet(); return; }
   if ("close" in d) return closeSheet();
+  if (d.react) { const [id, em] = d.react.split("|"); toggleReact(id, em); if (el.closest("#modal")) closeSheet(); return; }
+  if (d.pin) { const m = S.messages.find(x => x.id === d.pin); closeSheet(); if (m) { upd("messages", m.id, {pinned: !m.pinned}); toast(m.pinned ? "Van het prikbord gehaald" : "Op het prikbord gezet"); } return; }
+  if (d.delmsg) { if (el.dataset.armed) { closeSheet(); del("messages", d.delmsg); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
+  if (d.qemo) { sendMsg(d.qemo); return; }
+  if (d.msg) return openMsg(d.msg);
   if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); $("#picker").hidden = true; render(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
@@ -749,7 +890,9 @@ document.addEventListener("change", e => {
   if (t.dataset.task) toggleTask(t.dataset.task);
   if (t.dataset.shop) upd("shopping", t.dataset.shop, {done: t.checked});
 });
+document.addEventListener("input", e => { if (e.target.id === "cmsg") chatDraft = e.target.value; });
 document.addEventListener("submit", e => {
+  if (e.target.id === "cform") { e.preventDefault(); const inp = $("#cmsg"); sendMsg(inp.value); inp.value = ""; chatDraft = ""; inp.focus(); return; }
   if (e.target.id !== "qform") return;
   e.preventDefault();
   const inp = $("#qitem"), v = inp.value.trim(); if (!v) return;

@@ -1,6 +1,6 @@
 // Bende van ellende: zorgt dat de app opstart zonder wifi.
 // Na een update van de bestanden: verhoog het versienummer hieronder.
-const VERSIE = "bende-v1";
+const VERSIE = "bende-v2";
 const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
