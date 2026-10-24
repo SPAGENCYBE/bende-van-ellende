@@ -424,12 +424,13 @@ async function init(){
     let fs;
     try { fs = fsM.initializeFirestore(app, {localCache: fsM.persistentLocalCache({tabManager: fsM.persistentMultipleTabManager()})}); }
     catch { fs = fsM.getFirestore(app); }
-    FB = {auth, authM, fs, fsM};
+    FB = {app, auth, authM, fs, fsM, base};
     authM.onAuthStateChanged(auth, u => { if (u) { hideLogin(); startSync(); } else { mode = "login"; render(); showLogin(); } });
   } catch (e) { mode = "error"; render(); }
 }
 function startSync(){
   if (syncing) return; syncing = true; mode = "db"; render();
+  setTimeout(pushRefresh, 3000);
   const {fs, fsM} = FB;
   const onErr = e => { if (e && e.code === "permission-denied") toast("Dit account heeft geen toegang. Controleer de UID in de Firestore-regels."); };
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
@@ -479,6 +480,65 @@ function pling(notes = [660, 880, 1320]){
     });
   } catch {}
 }
+// ---------- pushmeldingen ----------
+const pushSupported = () => "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+const pushToken = () => store.get("bve-push-token") || "";
+const pushPref = k => store.get("bve-push-" + k) !== "0";
+async function messagingInst(){
+  if (FB.msg) return FB.msg;
+  const msgM = await import(FB.base + "firebase-messaging.js");
+  if (!(await msgM.isSupported())) return null;
+  FB.msgM = msgM; FB.msg = msgM.getMessaging(FB.app);
+  msgM.onMessage(FB.msg, p => { if (p.data && p.data.type === "agenda") { toast(`${p.notification?.title || ""} ${p.notification?.body ? "· " + p.notification.body : ""}`); pling([660, 990]); } });
+  return FB.msg;
+}
+async function registerToken(silent){
+  const m = await messagingInst(); if (!m) { if (!silent) toast("Dit toestel ondersteunt geen pushmeldingen."); return false; }
+  const reg = await navigator.serviceWorker.ready;
+  const token = await FB.msgM.getToken(m, {vapidKey: CFG.vapidKey, serviceWorkerRegistration: reg});
+  const old = pushToken();
+  if (old && old !== token) FB.fsM.deleteDoc(FB.fsM.doc(FB.fs, "pushTokens", old)).catch(() => {});
+  await FB.fsM.setDoc(FB.fsM.doc(FB.fs, "pushTokens", token), {who, msgs: pushPref("msgs"), agenda: pushPref("agenda"), device: navigator.userAgent.slice(0, 140), at: Date.now()});
+  store.set("bve-push-token", token);
+  return true;
+}
+async function pushOn(){
+  if (!CFG.vapidKey) { toast("Pushmeldingen zijn nog niet ingesteld."); return; }
+  if (isIOS && !standalone()) { toast("Zet de app eerst op je beginscherm, open hem daar en zet dan meldingen aan."); return; }
+  if (!pushSupported()) { toast("Dit toestel of deze browser ondersteunt geen pushmeldingen."); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") { toast("Meldingen zijn niet toegestaan. Zet ze aan in de instellingen van je toestel."); render(); return; }
+  toast("Meldingen aanzetten…");
+  try { if (await registerToken()) { toast("Meldingen staan aan op dit toestel."); render(); } }
+  catch (e) { toast("Meldingen aanzetten lukte niet. Controleer je internet en probeer opnieuw."); }
+}
+async function pushOff(){
+  const token = pushToken();
+  try { const m = await messagingInst(); if (m) await FB.msgM.deleteToken(m); } catch {}
+  if (token) FB.fsM.deleteDoc(FB.fsM.doc(FB.fs, "pushTokens", token)).catch(() => {});
+  store.set("bve-push-token", ""); toast("Meldingen staan uit op dit toestel."); render();
+}
+function pushToggle(k){
+  store.set("bve-push-" + k, pushPref(k) ? "0" : "1");
+  const token = pushToken();
+  if (token && mode === "db") FB.fsM.updateDoc(FB.fsM.doc(FB.fs, "pushTokens", token), {[k]: pushPref(k)}).catch(() => {});
+  render();
+}
+function pushSync(){ const token = pushToken(); if (token && mode === "db") FB.fsM.updateDoc(FB.fsM.doc(FB.fs, "pushTokens", token), {who, at: Date.now()}).catch(() => {}); }
+function pushRefresh(){ if (pushToken() && CFG.vapidKey && pushSupported() && Notification.permission === "granted") registerToken(true).catch(() => {}); }
+function pushRow(){
+  if (mode !== "db") return "";
+  let txt, btns = "";
+  if (!CFG.vapidKey) txt = "Nog niet ingesteld (zie stappenplan).";
+  else if (!pushSupported()) txt = isIOS && !standalone() ? "Zet de app eerst op je beginscherm en open hem daar." : "Niet mogelijk op dit toestel of in deze browser.";
+  else if (Notification.permission === "denied") txt = "Geblokkeerd. Sta meldingen toe in de instellingen van je toestel.";
+  else if (pushToken()) {
+    txt = "Aan voor dit toestel" + (who === "all" ? " (gezinsscherm: alle meldingen)." : ` (voor ${esc(M(who)?.name || "")}).`);
+    btns = `<button class="btn ghost sm" data-act="pmsgs">Berichten: ${pushPref("msgs") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="pagenda">Afspraken: ${pushPref("agenda") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="poff">Uitzetten</button>`;
+  } else { txt = "Krijg een melding bij nieuwe berichten en een uur voor een afspraak, ook als de app dicht is."; btns = `<button class="btn sm" data-act="pon">Aanzetten</button>`; }
+  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Pushmeldingen</div><div class="s">${txt}</div></div>${btns}</div>`;
+}
+
 // ---------- babbels (gezinschat) ----------
 const EMO = ["👍","❤️","😂","😮","🙏","🎉"];
 let lastMsgAt = null, chatDraft = "", chatStick = true;
@@ -854,6 +914,7 @@ function vBende(){
     <div class="list">
       <div class="row"><div class="grow"><div class="t">Wie gebruikt deze tablet?</div><div class="s">${who === "all" ? "Iedereen (gezinsscherm)" : esc(M(who)?.name || "")}</div></div><button class="btn ghost sm" data-act="picker">Wisselen</button></div>
       <div class="row" style="flex-wrap:wrap"><div class="grow"><div class="t">Google Agenda</div><div class="s">${gUrl() ? (G.error ? esc(G.error) : G.calendars.length ? `Gekoppeld: ${G.calendars.length} agenda's. ${(() => { const un = G.calendars.filter(c => !calMember(c.name) && !isMenuCal(c.name)).map(c => c.name); return un.length ? `Voor iedereen: ${esc(un.join(", "))}.` : ""; })()}` : "Gekoppeld, even ophalen…") : "Niet gekoppeld. Toon jullie Google-afspraken in de app."}</div></div>${gUrl() ? `<button class="btn ghost sm" data-act="gsync">Vernieuwen</button><button class="btn ghost sm" data-act="glink">Wijzigen</button>` : `<button class="btn sm" data-act="glink">Koppelen</button>`}</div>
+      ${pushRow()}
       <div class="row"><div class="grow"><div class="t">Geluidjes</div><div class="s">Een vrolijk pling als je een taak afvinkt</div></div><button class="btn ghost sm" data-act="sound">${soundOn ? "Aan" : "Uit"}</button></div>
       <div class="row"><div class="grow"><div class="t">Op het beginscherm</div><div class="s">${standalone() ? "Deze app is geïnstalleerd." : isIOS ? "Tik in Safari op Delen en kies Zet op beginscherm." : deferredInstall ? "Installeer de app met één tik." : "Kies in het browsermenu ⋮ voor App installeren."}</div></div>${deferredInstall && !standalone() ? '<button class="btn sm" data-act="install">Installeren</button>' : ""}</div>
       ${mode === "db" ? '<div class="row"><div class="grow"><div class="t">Afmelden</div><div class="s">Daarna is het gezinswachtwoord weer nodig</div></div><button class="btn danger sm" data-act="logout">Afmelden</button></div>' : '<div class="row"><div class="grow"><div class="t">Demo-modus</div><div class="s">Gegevens staan alleen op dit toestel. Vul firebase-config.js in om alles te delen.</div></div><button class="btn ghost sm" data-act="reset">Demo wissen</button></div>'}
@@ -943,12 +1004,16 @@ document.addEventListener("click", e => {
   if (d.qemo) { sendMsg(d.qemo); return; }
   if (d.msg) return openMsg(d.msg);
   if (d.gev) return openGEvent(d.gev);
-  if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); $("#picker").hidden = true; render(); return; }
+  if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); pushSync(); $("#picker").hidden = true; render(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "picker") return openPicker();
   if (d.act === "sound") { soundOn = !soundOn; store.set("bve-sound", soundOn ? "1" : "0"); if (soundOn) pling(); render(); return; }
   if (d.act === "logout") return logout();
+  if (d.act === "pon") return pushOn();
+  if (d.act === "poff") return pushOff();
+  if (d.act === "pmsgs") return pushToggle("msgs");
+  if (d.act === "pagenda") return pushToggle("agenda");
   if (d.act === "gsync") { loadGoogle(true); render(); return; }
   if (d.act === "glink") return simpleForm("Google Agenda koppelen", "Plak de web-app-link van het Google-script (laat leeg om te ontkoppelen)", gUrl(), "text", v => {
     v = v.trim();
@@ -956,7 +1021,7 @@ document.addEventListener("click", e => {
     setMeta("google", v ? {url: v} : {}); if (mode !== "db") { S.meta.google = v ? {url: v} : {}; } G.fetchedAt = null; setTimeout(() => loadGoogle(true), 300); toast(v ? "Gekoppeld! Afspraken worden opgehaald." : "Google Agenda ontkoppeld.");
   });
   if (d.act === "reset") { if (el.dataset.armed) { try { localStorage.removeItem("bve-demo"); localStorage.removeItem("bve-picked"); } catch {} location.reload(); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
-  if (d.who) { who = d.who; store.set("bve-who", who); render(); return; }
+  if (d.who) { who = d.who; store.set("bve-who", who); pushSync(); render(); return; }
   if (d.tab) { tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
   if (d.sub) { sub = d.sub; render(); return; }
   if (d.new) return openForm(d.new);

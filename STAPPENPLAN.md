@@ -127,3 +127,25 @@ Vervang de bestanden in je GitHub-repository. Verhoog in `sw.js` het versienumme
 
 Elke Google-agenda hoort bij het gezinslid met dezelfde naam. Een agenda met "menu" in de naam vult het weekmenu. Andere agenda's gelden voor iedereen.
 Behandel de web-app-link als een wachtwoord: wie hem heeft, kan jullie afspraken zien.
+
+---
+
+## Pushmeldingen
+
+1. **Blaze-abonnement:** klik in Firebase linksonder op **Upgrade** en kies **Blaze**. Stel bij de vraag een budgetalarm in, bijvoorbeeld € 1. Voor een gezin blijf je binnen het gratis gebruik.
+2. **Sleutel voor webmeldingen:** ⚙️ **Projectinstellingen → Cloud Messaging → Web Push-certificaten → Sleutelpaar genereren**. Zet de sleutel bij `vapidKey` in `firebase-config.js`.
+3. **Functies uitrollen** (op je computer):
+   - Installeer Node.js LTS van nodejs.org.
+   - Open een terminal (Windows: PowerShell) in de projectmap en voer uit:
+     ```
+     npm install -g firebase-tools
+     firebase login
+     cd functions
+     npm install
+     cd ..
+     firebase deploy --only functions
+     ```
+   - Vraagt de terminal iets over het opruimen van oude images, typ dan `y`.
+4. Open de app op elk toestel → **De bende → Deze tablet → Pushmeldingen → Aanzetten**.
+
+Je krijgt een melding bij een nieuw bericht in Babbels (niet van jezelf) en een uur voor elke afspraak met een uur, uit de app en uit Google Agenda. Per toestel kun je berichten of afspraken uitzetten.

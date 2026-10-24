@@ -2,7 +2,7 @@
 // Gekoppeld aan het Firebase-project "bende-van-ellende".
 // Zet "firebase: null" terug om de app in DEMO-modus te proberen (gegevens alleen op dit toestel).
 
-window.BVE_CONFIG = {
+self.BVE_CONFIG = {
   firebase: {
     apiKey: "AIzaSyAS3f3TwTYWt-8QHXg5SFh0dZTE9MgkHOA",
     authDomain: "bende-van-ellende.firebaseapp.com",
@@ -13,5 +13,8 @@ window.BVE_CONFIG = {
   },
 
   // Het e-mailadres van het gezinsaccount (stap 4). Wordt alvast ingevuld op het inlogscherm.
-  familyEmail: "carlos.van.nieuwenborgh@gmail.com"
+  familyEmail: "carlos.van.nieuwenborgh@gmail.com",
+
+  // Publieke sleutel voor pushmeldingen: Firebase → Projectinstellingen → Cloud Messaging → Web Push-certificaten.
+  vapidKey: ""
 };
