@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Alleen het gezinsaccount mag lezen en schrijven.
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == "nVuHod6JyEduBsB0e4peFc6d3883";
+    }
+  }
+}
