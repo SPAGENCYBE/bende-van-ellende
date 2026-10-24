@@ -114,3 +114,16 @@ Vervang de bestanden in je GitHub-repository. Verhoog in `sw.js` het versienumme
 | "Geen verbinding" bij opstarten | Controleer of `firebase-config.js` correct is ingevuld (komma's en aanhalingstekens). |
 | Geen knop "App installeren" | Werkt alleen via `https://` (dus via GitHub Pages, niet door het bestand te openen). Op iPad gaat het altijd via Delen. |
 | Nog de demo met Papa, Mama, Lotte en Wout | `firebase-config.js` staat nog op `firebase: null`. |
+
+---
+
+## Google Agenda koppelen
+
+1. Ga naar **script.google.com** met het Google-account waarin jullie agenda's staan. Klik op **Nieuw project** en geef het de naam `Bende agenda`.
+2. Wis de code in `Code.gs` en plak de inhoud van `google-agenda-koppeling.gs`. Klik op het diskette-icoon om op te slaan.
+3. Kies bovenaan de functie **testen** en klik op **Uitvoeren**. Geef toegang: kies je account, klik op **Geavanceerd** en daarna op **Ga naar Bende agenda (onveilig)** en **Toestaan**. Het is je eigen script; die waarschuwing is normaal. Onderaan zie je nu de gevonden agenda's.
+4. Klik rechtsboven op **Implementeren → Nieuwe implementatie**. Kies bij het tandwiel **Web-app**. Zet *Uitvoeren als* op **Ik** en *Wie heeft toegang* op **Iedereen**. Klik op **Implementeren** en kopieer de **web-app-URL** (eindigt op `/exec`).
+5. Open de app, ga naar **De bende → Deze tablet → Google Agenda → Koppelen** en plak de link. Eén keer is genoeg voor alle toestellen.
+
+Elke Google-agenda hoort bij het gezinslid met dezelfde naam. Een agenda met "menu" in de naam vult het weekmenu. Andere agenda's gelden voor iedereen.
+Behandel de web-app-link als een wachtwoord: wie hem heeft, kan jullie afspraken zien.

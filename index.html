@@ -277,6 +277,8 @@ nav.tabs button{position:relative}
 .emo-row button:hover{transform:scale(1.12) rotate(-6deg)}
 .emo-row button.on{background:var(--c-huis);border-color:var(--shade)}
 .sheet-quote{font-weight:800;font-size:17px;background:var(--paper-2);border:2px solid var(--line);border-radius:14px;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 10px}
+
+.gmark{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--c-agenda);color:#1c1530;font-size:10px;font-weight:900;margin-left:6px;vertical-align:2px;border:1.5px solid var(--shade)}
 </style>
 </head>
 <body data-sec="home">
@@ -341,7 +343,7 @@ const TABS = [["home","Overzicht"],["babbel","Babbels"],["agenda","Agenda"],["hu
 // ---------- state ----------
 const COLS = ["messages","members","events","tasks","shopping","expenses","costs","pots","docs","contacts"];
 const S = {}; COLS.forEach(c => S[c] = []);
-S.meta = { menu:{}, budget:{amount:0} };
+S.meta = { menu:{}, budget:{amount:0}, google:{} };
 let mode = "loading", readOnly = false;
 let tab = TABS.some(t => t[0] === location.hash.slice(1)) ? location.hash.slice(1) : "home";
 let sub = "taken", monthOff = 0;
@@ -413,7 +415,7 @@ function sample(){
 async function init(){
   render();
   const cfg = CFG.firebase;
-  if (!cfg || !cfg.apiKey) { mode = "local"; loadDemo(); render(); maybePicker(); return; }
+  if (!cfg || !cfg.apiKey) { mode = "local"; loadDemo(); S.meta.google ||= {}; render(); maybePicker(); loadGoogle(); return; }
   try {
     const base = "https://www.gstatic.com/firebasejs/10.12.2/";
     const [appM, authM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
@@ -432,7 +434,7 @@ function startSync(){
   const onErr = e => { if (e && e.code === "permission-denied") toast("Dit account heeft geen toegang. Controleer de UID in de Firestore-regels."); };
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
   COLS.filter(c => c !== "messages").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
-  ["menu","budget"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); render(); }, onErr));
+  ["menu","budget","google"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
 }
 function showLogin(){
   const el = $("#login"); el.hidden = false;
@@ -577,7 +579,7 @@ function renderWall(){
       ${S.messages.filter(m => m.pinned).slice(-2).map(m => `<button class="pin" data-msg="${m.id}" style="width:100%;margin-bottom:8px">${avatar(M(m.from))}<span class="pt">${esc(m.text)}</span></button>`).join("")}
       ${S.messages.length ? `<div class="list">${S.messages.slice(-3).map(m => `<div class="row click" data-tab="babbel">${avatar(M(m.from))}<div class="grow"><div class="t" style="font-weight:700">${esc(String(m.text).slice(0, 90))}</div><div class="s">${esc(M(m.from)?.name || "Iemand")} · ${dayLabel(ds(new Date(m.at || 0)))}</div></div></div>`).join("")}</div>` : empty("Nog geen berichten.")}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span></h3>${taskRows(tasks)}</div>
-      <div class="card note"><h3><span class="tag">Vanavond eten we</span></h3><div class="big">${esc(S.meta.menu?.[dayKey] || "Nog een verrassing")}</div>
+      <div class="card note"><h3><span class="tag">Vanavond eten we</span></h3><div class="big">${esc(menuFor(t) || "Nog een verrassing")}</div>
         ${S.messages.some(m => m.pinned) ? `<div class="label" style="margin-top:14px">Prikbord</div>${S.messages.filter(m => m.pinned).slice(-3).map(m => `<div style="font-weight:800">${esc(M(m.from)?.name || "")}: ${esc(m.text)}</div>`).join("")}` : ""}<div class="label" style="margin-top:14px">Boodschappen</div><div style="font-weight:800">${S.shopping.filter(x => !x.done).map(x => esc(x.item)).join(" · ") || "Niets nodig"}</div></div>
     </div>`;
 }
@@ -618,6 +620,68 @@ function confetti(el, pts){
   if (pts) { const b = document.createElement("span"); b.className = "burst"; b.textContent = "+" + pts + " ★"; b.style.left = x + "px"; b.style.top = (y - 30) + "px"; document.body.appendChild(b); setTimeout(() => b.remove(), 1050); }
 }
 
+// ---------- Google Agenda ----------
+let G = {events:[], calendars:[], updated:null, error:null, loading:false};
+try { const c = JSON.parse(store.get("bve-gcache") || "null"); if (c && c.events) G = {...G, ...c}; } catch {}
+const gUrl = () => (S.meta.google && S.meta.google.url) || "";
+const normName = x => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const calMember = cal => S.members.find(m => normName(m.name) === normName(cal))?.id || "";
+const isMenuCal = cal => /menu/i.test(cal || "");
+async function loadGoogle(force){
+  const url = gUrl();
+  if (!url) { if (G.events.length) { G = {events:[], calendars:[], updated:null, error:null, loading:false}; store.set("bve-gcache", ""); render(); } return; }
+  if (G.loading) return;
+  if (!force && G.updated && G.url === url && Date.now() - new Date(G.fetchedAt || 0) < 4 * 60e3) return;
+  G.loading = true;
+  try {
+    const res = await fetch(url, {redirect:"follow"});
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || "Onbekende fout");
+    G = {events: d.events || [], calendars: d.calendars || [], updated: d.updated, fetchedAt: new Date().toISOString(), url, error:null, loading:false};
+    store.set("bve-gcache", JSON.stringify(G));
+  } catch (e) { G.loading = false; G.error = "Google Agenda kon niet worden opgehaald. Controleer de koppel-link en je internet."; }
+  render(); renderWall();
+}
+setInterval(() => loadGoogle(), 10 * 60e3);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") loadGoogle(); });
+function gEvents(){
+  const t = today();
+  return G.events.filter(e => !isMenuCal(e.cal)).map(e => {
+    const span = e.endDate && e.endDate > e.date;
+    const shown = span && e.date < t && e.endDate >= t ? t : e.date;
+    const m = calMember(e.cal);
+    return {id:"g-" + e.id, gid:e.id, title:e.title || "(zonder titel)", date:shown, start:e.date, time:e.time, endDate:e.endDate, endTime:e.endTime, allDay:e.allDay, span,
+      who: m ? [m] : [], cal:e.cal, location:e.location, note:e.note, google:true, virtual:true};
+  });
+}
+function gMenu(d){ return G.events.filter(e => isMenuCal(e.cal) && e.date <= d && (e.endDate || e.date) >= d).map(e => e.title).join(" · "); }
+function menuFor(d){ return gMenu(d) || S.meta.menu?.[["zo","ma","di","wo","do","vr","za"][parse(d).getDay()]] || ""; }
+const gWritable = () => G.calendars.filter(c => c.writable && !isMenuCal(c.name) && !/feestdag|holiday|verjaardag|birthday/i.test(c.name));
+async function gCreate(data){
+  toast("Bezig met toevoegen aan Google Agenda…");
+  try {
+    const res = await fetch(gUrl(), {method:"POST", body: JSON.stringify({action:"create", ...data})});
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+    toast(`Toegevoegd aan de agenda van ${data.calendar}`);
+    loadGoogle(true);
+  } catch (e) { toast("Toevoegen aan Google Agenda lukte niet. Probeer opnieuw of voeg de afspraak toe in Google Agenda."); }
+}
+function openGEvent(id){
+  const e = gEvents().find(x => x.id === id); if (!e) return;
+  const when = e.allDay ? (e.span ? `${fmtDay(e.start)} t/m ${fmtDay(e.endDate)}` : `${fmtDay(e.start)}, hele dag`) : `${fmtDay(e.start)} · ${e.time}${e.endTime ? `–${e.endTime}` : ""}`;
+  showSheet(`<h3><span>Afspraak</span> uit Google</h3>
+    <p class="sheet-quote">${esc(e.title)}</p>
+    <div class="list">
+      <div class="row"><div class="grow"><div class="label">Wanneer</div><div class="t" style="text-transform:capitalize">${when}</div></div></div>
+      <div class="row"><div class="grow"><div class="label">Agenda</div><div class="t">${esc(e.cal)}</div></div>${avs(e.who)}</div>
+      ${e.location ? `<div class="row"><div class="grow"><div class="label">Waar</div><div class="t">${esc(e.location)}</div></div></div>` : ""}
+      ${e.note ? `<div class="row"><div class="grow"><div class="label">Notitie</div><div class="s" style="white-space:pre-wrap">${esc(e.note)}</div></div></div>` : ""}
+    </div>
+    <p class="s" style="color:var(--muted);font-weight:700;margin-top:12px">Wijzigen of verwijderen doe je in Google Agenda. De app werkt zichzelf daarna bij.</p>
+    <div class="actions"><div class="r"><button class="btn ghost" data-close>Sluiten</button></div></div>`);
+}
+
 // ---------- birthdays as events ----------
 function allEvents(){
   const t = today(), y = new Date().getFullYear();
@@ -626,7 +690,7 @@ function allEvents(){
     const age = +d.slice(0,4) - +m.birthday.slice(0,4);
     return {id:"bd-"+m.id, title:`Verjaardag ${m.name}${age > 0 && age < 120 ? ` (${age})` : ""}`, date:d, time:"", who:[m.id], virtual:true};
   });
-  return [...S.events, ...bdays].filter(mine("who")).sort((a,b) => (a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
+  return [...S.events, ...bdays, ...gEvents()].filter(mine("who")).sort((a,b) => (a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
 }
 
 // ---------- rendering ----------
@@ -655,14 +719,19 @@ function render(){
 const empty = (txt) => `<div class="empty">${txt}</div>`;
 const sec = (title, btn) => `<div class="sechead"><h2>${title}</h2>${btn || ""}</div>`;
 
+function evRow(e){
+  const click = e.google ? `class="row click" data-gev="${e.id}"` : e.virtual ? `class="row"` : `class="row click" data-edit="events:${e.id}"`;
+  const sub = [e.span ? `t/m ${fmtDay(e.endDate)}` : "", e.time && e.endTime ? `tot ${e.endTime}` : "", e.location, !e.google && e.note ? e.note : ""].filter(Boolean).map(esc).join(" · ");
+  const who = (e.who || []).length ? avs(e.who) : e.google ? `<span class="pill n">${esc(e.cal)}</span>` : '<span class="pill n">Iedereen</span>';
+  return `<div ${click}><span class="time">${esc(e.time || (e.allDay ? "Dag" : ""))}</span><div class="grow"><div class="t">${esc(e.title)}${e.google ? '<span class="gmark" title="Uit Google Agenda">G</span>' : ""}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>${who}</div>`;
+}
 function eventRows(list){
   if (!list.length) return empty("Niets gepland.");
   const groups = {}; list.forEach(e => (groups[e.date] ||= []).push(e));
   return Object.entries(groups).map(([d, es]) => {
     const n = daysBetween(today(), d);
     const rel = n === 0 ? "Vandaag" : n === 1 ? "Morgen" : `over ${n} dagen`;
-    return `<div class="day"><div class="dayhead"><b>${fmtDay(d)}</b><span class="label">${rel}</span></div><div class="list">` +
-      es.map(e => `<div class="row ${e.virtual?"":"click"}" ${e.virtual?"":`data-edit="events:${e.id}"`}><span class="time">${esc(e.time||"")}</span><div class="grow"><div class="t">${esc(e.title)}</div>${e.note?`<div class="s">${esc(e.note)}</div>`:""}</div>${(e.who||[]).length?avs(e.who):'<span class="pill n">Iedereen</span>'}</div>`).join("") + `</div></div>`;
+    return `<div class="day"><div class="dayhead"><b>${fmtDay(d)}</b><span class="label">${rel}</span></div><div class="list">` + es.map(evRow).join("") + `</div></div>`;
   }).join("");
 }
 
@@ -707,7 +776,7 @@ function vHome(){
   const dayKey = ["zo","ma","di","wo","do","vr","za"][new Date().getDay()];
   const hr = new Date().getHours(), greet = hr < 6 ? "Hallo nachtuil" : hr < 12 ? "Goeiemorgen" : hr < 18 ? "Goeiemiddag" : "Goeienavond";
   return `<p class="hello">${greet}, <span>${me ? esc(me.name) : "bende"}</span>!</p>
-  <p class="lead">${tasks.length} open ${tasks.length===1?"taak":"taken"} · ${ev.filter(e=>e.date===t).length} ${ev.filter(e=>e.date===t).length===1?"afspraak":"afspraken"} vandaag${S.meta.menu?.[dayKey] ? ` · vanavond: ${esc(S.meta.menu[dayKey])}` : ""}</p>
+  <p class="lead">${tasks.length} open ${tasks.length===1?"taak":"taken"} · ${ev.filter(e=>e.date===t).length} ${ev.filter(e=>e.date===t).length===1?"afspraak":"afspraken"} vandaag${menuFor(t) ? ` · vanavond: ${esc(menuFor(t))}` : ""}</p>
   ${me ? `<div class="card" style="margin-bottom:22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;--cc:${esc(me.color)}">${avatar(me,"lg")}<div class="grow" style="flex:1;min-width:0"><div class="label">${me.role==="kind"?"Kind":"Ouder"}</div><div style="font-weight:700;font-size:18px">${esc(me.name)}</div></div>
     <div><div class="label">Punten</div><div class="big num">${+me.points||0}</div></div>${me.allowance?`<div><div class="label">Zakgeld / week</div><div class="big num">${eur(me.allowance)}</div></div>`:""}</div>` : ""}
   <div class="grid">
@@ -726,8 +795,8 @@ function vHome(){
 function vAgenda(){
   const t = today();
   const list = allEvents().filter(e => e.date >= t && e.date <= addDays(t, 120));
-  return sec("Agenda", `<button class="btn" data-new="events">Afspraak toevoegen</button>`) +
-    `<div class="card">${eventRows(list)}</div><p class="s" style="color:var(--muted);margin-top:10px">Verjaardagen komen automatisch uit De bende. Je ziet de komende 4 maanden.</p>`;
+  return sec("Agenda", `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${gUrl() ? `<button class="btn ghost" data-act="gsync">${G.loading ? "Bezig…" : "Vernieuwen"}</button>` : ""}<button class="btn" data-new="events">Afspraak toevoegen</button></div>`) + (G.error && gUrl() ? `<div class="card" style="--cc:var(--c-admin);margin-bottom:14px"><b>${esc(G.error)}</b></div>` : "") +
+    `<div class="card">${eventRows(list)}</div><p class="s" style="color:var(--muted);margin-top:10px">${gUrl() ? `Afspraken met een G komen uit Google Agenda${G.fetchedAt ? `, bijgewerkt om ${new Date(G.fetchedAt).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"})}` : ""}. ` : ""}Verjaardagen komen automatisch uit De bende. Je ziet de komende 4 maanden.</p>`;
 }
 
 function vHuis(){
@@ -739,9 +808,10 @@ function vHuis(){
       ${done.length?`<div style="margin-top:12px"><button class="btn ghost sm" id="clearShop">Afgevinkte items wissen (${done.length})</button></div>`:""}</div>`;
   }
   if (sub === "menu") {
-    const days = [["ma","Maandag"],["di","Dinsdag"],["wo","Woensdag"],["do","Donderdag"],["vr","Vrijdag"],["za","Zaterdag"],["zo","Zondag"]];
-    const nowK = ["zo","ma","di","wo","do","vr","za"][new Date().getDay()];
-    return sec("Huishouden") + tabs + `<div class="week">${days.map(([k,l])=>`<button class="wd ${k===nowK?"now":""}" data-menu="${k}"><b>${l}${k===nowK?'<span class="pill pts">Vandaag</span>':""}</b><span style="font-size:17px;${S.meta.menu?.[k]?"font-weight:900":"opacity:.6"}">${esc(S.meta.menu?.[k] || "Tik om iets te plannen")}</span></button>`).join("")}</div>`;
+    const ws = weekStart(), keys = ["ma","di","wo","do","vr","za","zo"], names = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
+    return sec("Huishouden") + tabs + `<div class="week">${keys.map((k, i) => { const d = addDays(ws, i), g = gMenu(d), txt = g || S.meta.menu?.[k] || "";
+      return `<button class="wd ${d === today() ? "now" : ""}" data-menu="${k}"><b>${names[i]}${d === today() ? '<span class="pill pts">Vandaag</span>' : ""}</b><span style="font-size:17px;${txt ? "font-weight:900" : "opacity:.6"}">${esc(txt || "Tik om iets te plannen")}</span>${g ? '<span class="label">Uit Google Agenda</span>' : ""}</button>`; }).join("")}</div>
+      ${G.calendars.some(c => isMenuCal(c.name)) ? `<p class="s" style="color:var(--muted);margin-top:12px;font-weight:700">Gerechten uit de agenda "${esc(G.calendars.find(c => isMenuCal(c.name)).name)}" gaan voor. Wat je hier tikt, geldt voor dagen zonder gerecht in Google.</p>` : ""}`;
   }
   const list = S.tasks.filter(mine("who")).sort((a,b) => isDone(a) - isDone(b) || (a.title||"").localeCompare(b.title||""));
   return sec("Huishouden", `<button class="btn" data-new="tasks">Taak toevoegen</button>`) + tabs + `<div class="card">${taskRows(list)}</div>
@@ -783,6 +853,7 @@ function vBende(){
   `<div class="card" style="--cc:var(--c-home);margin-top:22px;max-width:640px"><h3><span class="tag">Deze tablet</span></h3>
     <div class="list">
       <div class="row"><div class="grow"><div class="t">Wie gebruikt deze tablet?</div><div class="s">${who === "all" ? "Iedereen (gezinsscherm)" : esc(M(who)?.name || "")}</div></div><button class="btn ghost sm" data-act="picker">Wisselen</button></div>
+      <div class="row" style="flex-wrap:wrap"><div class="grow"><div class="t">Google Agenda</div><div class="s">${gUrl() ? (G.error ? esc(G.error) : G.calendars.length ? `Gekoppeld: ${G.calendars.length} agenda's. ${(() => { const un = G.calendars.filter(c => !calMember(c.name) && !isMenuCal(c.name)).map(c => c.name); return un.length ? `Voor iedereen: ${esc(un.join(", "))}.` : ""; })()}` : "Gekoppeld, even ophalen…") : "Niet gekoppeld. Toon jullie Google-afspraken in de app."}</div></div>${gUrl() ? `<button class="btn ghost sm" data-act="gsync">Vernieuwen</button><button class="btn ghost sm" data-act="glink">Wijzigen</button>` : `<button class="btn sm" data-act="glink">Koppelen</button>`}</div>
       <div class="row"><div class="grow"><div class="t">Geluidjes</div><div class="s">Een vrolijk pling als je een taak afvinkt</div></div><button class="btn ghost sm" data-act="sound">${soundOn ? "Aan" : "Uit"}</button></div>
       <div class="row"><div class="grow"><div class="t">Op het beginscherm</div><div class="s">${standalone() ? "Deze app is geïnstalleerd." : isIOS ? "Tik in Safari op Delen en kies Zet op beginscherm." : deferredInstall ? "Installeer de app met één tik." : "Kies in het browsermenu ⋮ voor App installeren."}</div></div>${deferredInstall && !standalone() ? '<button class="btn sm" data-act="install">Installeren</button>' : ""}</div>
       ${mode === "db" ? '<div class="row"><div class="grow"><div class="t">Afmelden</div><div class="s">Daarna is het gezinswachtwoord weer nodig</div></div><button class="btn danger sm" data-act="logout">Afmelden</button></div>' : '<div class="row"><div class="grow"><div class="t">Demo-modus</div><div class="s">Gegevens staan alleen op dit toestel. Vul firebase-config.js in om alles te delen.</div></div><button class="btn ghost sm" data-act="reset">Demo wissen</button></div>'}
@@ -793,7 +864,12 @@ function vBende(){
 const memberOpts = (empty) => [["", empty], ...S.members.map(m => [m.id, m.name])];
 const FORMS = {
   members: () => ({title:"Lid", fields:[{k:"name",l:"Naam",req:1},{k:"role",l:"Rol",t:"select",o:[["ouder","Ouder"],["kind","Kind"]]},{k:"color",l:"Kleur",t:"color"},{k:"birthday",l:"Verjaardag",t:"date"},{k:"allowance",l:"Zakgeld per week (€)",t:"number"}], def:{role:"kind", color:COLORS[S.members.length % COLORS.length]}}),
-  events: () => ({title:"Afspraak", fields:[{k:"title",l:"Wat",req:1},{k:"date",l:"Datum",t:"date",req:1},{k:"time",l:"Uur",t:"time"},{k:"who",l:"Voor wie (leeg = iedereen)",t:"members"},{k:"note",l:"Notitie",t:"textarea"}], def:{date:today(), who: who!=="all"?[who]:[]}}),
+  events: (item) => { const cals = !item && gUrl() ? gWritable() : [];
+    const defCal = (cals.find(c => calMember(c.name) === who) || cals.find(c => calMember(c.name)) || cals[0] || {}).name || "";
+    return {title:"Afspraak", fields:[{k:"title",l:"Wat",req:1},{k:"date",l:"Datum",t:"date",req:1},{k:"time",l:"Uur (leeg = hele dag)",t:"time"},
+      ...(cals.length ? [{k:"gcal",l:"In welke Google-agenda?",t:"select",o:[...cals.map(c => [c.name, c.name]), ["", "Niet in Google, alleen in de app"]]},{k:"duration",l:"Duur in minuten",t:"number"}] : []),
+      {k:"who",l:cals.length ? "Voor wie (alleen bij 'Niet in Google')" : "Voor wie (leeg = iedereen)",t:"members"},{k:"note",l:"Notitie",t:"textarea"}],
+      def:{date:today(), who: who!=="all"?[who]:[], gcal:defCal, duration:60}}; },
   tasks: () => ({title:"Taak", fields:[{k:"title",l:"Taak",req:1},{k:"who",l:"Wie",t:"select",o:memberOpts("Wie wil")},{k:"repeat",l:"Herhaling",t:"select",o:[["none","Eenmalig"],["daily","Elke dag"],["weekly","Elke week"]]},{k:"due",l:"Tegen (optioneel)",t:"date"},{k:"points",l:"Punten",t:"number"}], def:{repeat:"weekly", who: who!=="all"?who:"", points:5}}),
   expenses: () => ({title:"Uitgave", fields:[{k:"desc",l:"Omschrijving",req:1},{k:"amount",l:"Bedrag (€)",t:"number",req:1},{k:"cat",l:"Categorie",t:"select",o:["Boodschappen","Wonen","Auto","Kinderen","School","Vrije tijd","Kleding","Gezondheid","Cadeaus","Overig"].map(x=>[x,x])},{k:"date",l:"Datum",t:"date",req:1},{k:"who",l:"Betaald door",t:"select",o:memberOpts("—")}], def:{date:today(), cat:"Boodschappen", who: who!=="all"?who:""}}),
   costs: () => ({title:"Vaste last", fields:[{k:"name",l:"Naam",req:1},{k:"amount",l:"Bedrag (€)",t:"number",req:1},{k:"freq",l:"Per",t:"select",o:[["maand","Maand"],["kwartaal","Kwartaal"],["jaar","Jaar"]]},{k:"cat",l:"Categorie",t:"select",o:["Wonen","Energie","Verzekering","Abonnementen","Auto","School","Overig"].map(x=>[x,x])},{k:"day",l:"Dag van de maand",t:"number"}], def:{freq:"maand", cat:"Wonen"}}),
@@ -814,7 +890,7 @@ function fieldHtml(f, v){
 
 function openForm(col, id){
   if (readOnly) { toast("Je kunt deze hub alleen bekijken."); return; }
-  const F = FORMS[col](), item = id ? S[col].find(x => x.id === id) : null, vals = item || F.def;
+  const item = id ? S[col].find(x => x.id === id) : null, F = FORMS[col](item), vals = item || F.def;
   showSheet(`<form id="sheetForm"><h3><span>${F.title}</span> ${item ? "bewerken" : "toevoegen"}</h3>
     ${F.fields.map(f => `<div class="field"><label ${f.t==="members"||f.t==="color"?"":`for="f_${f.k}"`}>${f.l}</label>${fieldHtml(f, vals[f.k])}</div>`).join("")}
     <div class="actions">${item?`<button type="button" class="btn danger" id="delBtn">Verwijderen</button>`:""}<div class="r"><button type="button" class="btn ghost" data-close>Annuleren</button><button class="btn">${item?"Opslaan":"Toevoegen"}</button></div></div></form>`);
@@ -834,6 +910,8 @@ function openForm(col, id){
       else data[f.k] = (fd.get(f.k) ?? "").toString().trim();
     });
     closeSheet();
+    if (col === "events" && !item && data.gcal) { gCreate({calendar:data.gcal, title:data.title, date:data.date, time:data.time, duration:data.duration || 60, note:data.note}); return; }
+    delete data.gcal; delete data.duration;
     if (item) upd(col, id, data); else add(col, col === "members" ? {...data, points:0} : data);
   });
 }
@@ -854,7 +932,7 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = fals
 
 // ---------- events ----------
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
+  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-gev],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
   if (!el) return;
   const d = el.dataset;
   if ("closeBg" in d) { if (e.target === el) closeSheet(); return; }
@@ -864,12 +942,19 @@ document.addEventListener("click", e => {
   if (d.delmsg) { if (el.dataset.armed) { closeSheet(); del("messages", d.delmsg); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
   if (d.qemo) { sendMsg(d.qemo); return; }
   if (d.msg) return openMsg(d.msg);
+  if (d.gev) return openGEvent(d.gev);
   if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); $("#picker").hidden = true; render(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "picker") return openPicker();
   if (d.act === "sound") { soundOn = !soundOn; store.set("bve-sound", soundOn ? "1" : "0"); if (soundOn) pling(); render(); return; }
   if (d.act === "logout") return logout();
+  if (d.act === "gsync") { loadGoogle(true); render(); return; }
+  if (d.act === "glink") return simpleForm("Google Agenda koppelen", "Plak de web-app-link van het Google-script (laat leeg om te ontkoppelen)", gUrl(), "text", v => {
+    v = v.trim();
+    if (v && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(v)) { toast("Dat lijkt geen juiste link. Hij begint met https://script.google.com/macros/s/ en eindigt op /exec."); return; }
+    setMeta("google", v ? {url: v} : {}); if (mode !== "db") { S.meta.google = v ? {url: v} : {}; } G.fetchedAt = null; setTimeout(() => loadGoogle(true), 300); toast(v ? "Gekoppeld! Afspraken worden opgehaald." : "Google Agenda ontkoppeld.");
+  });
   if (d.act === "reset") { if (el.dataset.armed) { try { localStorage.removeItem("bve-demo"); localStorage.removeItem("bve-picked"); } catch {} location.reload(); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
   if (d.who) { who = d.who; store.set("bve-who", who); render(); return; }
   if (d.tab) { tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
