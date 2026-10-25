@@ -11,9 +11,20 @@ try {
 } catch (e) { /* zonder internet bij de eerste start: meldingen later */ }
 
 // Na een update van de bestanden: verhoog het versienummer hieronder.
-const VERSIE = "bende-v5";
+const VERSIE = "bende-v6";
 const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
+
+// Klik op een melding: open de app (of breng hem naar voren).
+self.addEventListener("notificationclick", e => {
+  const link = (e.notification.data && (e.notification.data.link || (e.notification.data.FCM_MSG && e.notification.data.FCM_MSG.notification && e.notification.data.FCM_MSG.notification.click_action))) || "./";
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({type: "window", includeUncontrolled: true}).then(list => {
+    const open = list.find(c => c.url.startsWith(self.registration.scope));
+    if (open) { open.focus(); return; }
+    return self.clients.openWindow(link);
+  }));
+});
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSIE).then(c => c.addAll(BASIS)).then(() => self.skipWaiting()));

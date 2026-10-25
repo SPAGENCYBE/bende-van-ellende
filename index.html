@@ -489,7 +489,15 @@ async function messagingInst(){
   const msgM = await import(FB.base + "firebase-messaging.js");
   if (!(await msgM.isSupported())) return null;
   FB.msgM = msgM; FB.msg = msgM.getMessaging(FB.app);
-  msgM.onMessage(FB.msg, p => { if (p.data && p.data.type === "agenda") { toast(`${p.notification?.title || ""} ${p.notification?.body ? "· " + p.notification.body : ""}`); pling([660, 990]); } });
+  msgM.onMessage(FB.msg, async p => {
+    const n = p.notification || {};
+    // App staat open maar niet vooraan (ander venster, geminimaliseerd): toch een pop-up tonen.
+    if (document.visibilityState !== "visible" || !document.hasFocus()) {
+      try { const reg = await navigator.serviceWorker.ready; await reg.showNotification(n.title || "Bende van ellende", {body: n.body || "", icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: (p.data && p.data.type) || "bende", renotify: true, data: {link: p.fcmOptions?.link || ""}}); } catch {}
+      return;
+    }
+    if (p.data && p.data.type === "agenda") { toast(`${n.title || ""} ${n.body ? "· " + n.body : ""}`); pling([660, 990]); }
+  });
   return FB.msg;
 }
 async function registerToken(silent){
