@@ -16,5 +16,5 @@ self.BVE_CONFIG = {
   familyEmail: "carlos.van.nieuwenborgh@gmail.com",
 
   // Publieke sleutel voor pushmeldingen: Firebase → Projectinstellingen → Cloud Messaging → Web Push-certificaten.
-  vapidKey: ""
+  vapidKey: "BJOBZjEXGgxHwm2P5v-gHRtG8k83wQrDXPyuWJq5l0lTioA7d1APMJcnqXV6rfGfflvkP7LRJOhQiUBNawmLd5g"
 };
