@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Breuken &amp; procenten oefenen</title>
+<title>Breuken &amp; procenten · Alexis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -113,7 +113,7 @@ table.eq th{color:var(--brown);font-weight:900}
 <body>
 <header>
   <div class="wrap">
-    <h1>🍕 Breuken &amp; procenten</h1>
+    <h1>🍕 Breuken &amp; procenten · Alexis</h1>
     <p>Uitleg, voorbeelden en oefeningen bij les 11, 12 en 13</p>
     <div class="players" id="players"></div>
   </div>
@@ -131,8 +131,8 @@ table.eq th{color:var(--brown);font-weight:900}
 
 <!-- START -->
 <section class="view" id="v-start">
-  <h2>Hallo! 👋</h2>
-  <p class="sub">Kies eerst bovenaan wie er oefent. Elke juiste oefening = 1 ⭐.</p>
+  <h2>Hallo Alexis! 👋</h2>
+  <p class="sub">Elke juiste oefening levert je 1 ⭐ op. Hoeveel sterren verzamel jij?</p>
   <div class="start-grid">
     <button class="tile" data-go="les11"><div class="emoji">💯</div><b>Les 11 · Procenten</b><span>% omzetten, deel van een geheel berekenen, vraagstukken</span></button>
     <button class="tile" data-go="les12"><div class="emoji">📏</div><b>Les 12 · Breuk als rationaal getal</b><span>breuk = kommagetal = procent, breuk is een deling, afronden</span></button>
@@ -590,13 +590,11 @@ function renderLesson(lesson){
 }
 
 /* ---------- players & stars ---------- */
-const store={get(k,d){try{const v=localStorage.getItem('breuken-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('breuken-'+k,JSON.stringify(v));}catch(e){}}};
-let scores=store.get('scores',{Amylia:0,Alexis:0}), best=store.get('best',{Amylia:null,Alexis:null}), player=store.get('player','Amylia');
-/* Bende van ellende: speler meegeven vanuit de app (?speler=Amylia) */
-try{const sp=new URLSearchParams(location.search).get('speler');const hit=['Amylia','Alexis'].find(n=>n.toLowerCase()===String(sp||'').toLowerCase());if(hit){player=hit;store.set('player',player);}}catch(e){}
+const store={get(k,d){try{const v=localStorage.getItem('breuken-Alexis-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('breuken-Alexis-'+k,JSON.stringify(v));}catch(e){}}};
+let scores=store.get('scores',{Alexis:0}), best=store.get('best',{Alexis:null}), player='Alexis';
 function renderPlayers(){
-  document.getElementById('players').innerHTML=['Amylia','Alexis'].map(n=>`<button class="pl ${n===player?'on':''}" data-p="${n}">${n===player?'✏️ ':''}${n} <small>⭐ ${scores[n]||0}</small></button>`).join('');
-  const b=best[player];document.getElementById('best').textContent=b!=null?`Beste testscore van ${player}: ${b}/10`:'';
+  document.getElementById('players').innerHTML=['Alexis'].map(n=>`<button class="pl ${n===player?'on':''}" data-p="${n}">${n===player?'⭐ ':''}${n} <small>⭐ ${scores[n]||0}</small></button>`).join('');
+  const b=best[player];document.getElementById('best').textContent=b!=null?`Jouw beste testscore: ${b}/10`:'';
 }
 function addStar(){scores[player]=(scores[player]||0)+1;store.set('scores',scores);renderPlayers();
   /* Bende van ellende: ster doorgeven aan de app */

@@ -416,7 +416,7 @@ function sample(){
   S.members = [a,b,c,d];
   S.events = [{id:uid(),title:"Zwemles",date:t,time:"16:30",who:["m3"]},{id:uid(),title:"Oudercontact school",date:addDays(t,2),time:"19:00",who:["m1","m2"]},{id:uid(),title:"Etentje bij oma",date:addDays(t,5),time:"12:00",who:[]}];
   S.tasks = [{id:uid(),title:"Vaatwasser uitladen",who:"m3",repeat:"daily",points:5},{id:uid(),title:"Kamer opruimen",who:"m4",repeat:"weekly",points:10},{id:uid(),title:"Vuilniszakken buiten",who:"m1",repeat:"weekly",points:0},{id:uid(),title:"Gras maaien",who:"",repeat:"none",points:15}];
-  S.school = [{id:uid(),title:"Breuken oefenen voor de toets",kind:"Oefenen",vak:"Wiskunde",who:"m3",due:addDays(t,3),oef:"breuken",done:false},{id:uid(),title:"Spreekbeurt over haaien",kind:"Opdracht",vak:"Nederlands",who:"m4",due:addDays(t,9),done:false},{id:uid(),title:"Turnzak meebrengen",kind:"Meebrengen",vak:"",who:"m4",due:addDays(t,1),done:false}];
+  S.school = [{id:uid(),title:"Breuken oefenen voor de toets",kind:"Oefenen",vak:"Wiskunde",who:"m3",due:addDays(t,3),oef:"breuken-amylia",done:false},{id:uid(),title:"Spreekbeurt over haaien",kind:"Opdracht",vak:"Nederlands",who:"m4",due:addDays(t,9),done:false},{id:uid(),title:"Turnzak meebrengen",kind:"Meebrengen",vak:"",who:"m4",due:addDays(t,1),done:false}];
   S.shopping = [{id:uid(),item:"Melk",done:false},{id:uid(),item:"Brood",done:false},{id:uid(),item:"Wasmiddel",done:true}];
   S.expenses = [{id:uid(),desc:"Colruyt",amount:86.4,cat:"Boodschappen",date:t,who:"m2"},{id:uid(),desc:"Tanken",amount:62,cat:"Auto",date:addDays(t,-3),who:"m1"}];
   S.costs = [{id:uid(),name:"Lening huis",amount:850,freq:"maand",cat:"Wonen"},{id:uid(),name:"Internet + gsm",amount:79,freq:"maand",cat:"Abonnementen"},{id:uid(),name:"Autoverzekering",amount:540,freq:"jaar",cat:"Verzekering"}];
@@ -909,8 +909,14 @@ function pinRow(){
 
 // ---------- school ----------
 const OEFENINGEN = [
-  {id:"breuken", title:"Breuken & procenten", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-procenten.html", vak:"Wiskunde"}
+  {id:"breuken-amylia", title:"Breuken & procenten", voor:"Amylia", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-amylia.html", vak:"Wiskunde"},
+  {id:"breuken-alexis", title:"Breuken & procenten", voor:"Alexis", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-alexis.html", vak:"Wiskunde"}
 ];
+const oefMember = o => S.members.find(m => normName(m.name) === normName(o.voor));
+// Welke oefeningen zie je? Een kind alleen de zijne; een ouder of "Iedereen" alles (of die van het gekozen kind).
+const oefVisible = () => OEFENINGEN.filter(o => !o.voor || (who === "all" && !kidView()) || normName(M(who)?.name) === normName(o.voor) || (!kidView() && M(who)?.role !== "kind"));
+// Oefening bij een schooltaak (ook oude taken die nog naar "breuken" verwijzen).
+const oefFor = x => OEFENINGEN.find(o => o.id === x.oef) || (x.oef && x.oef.startsWith("breuken") ? OEFENINGEN.find(o => o.id.startsWith("breuken") && normName(o.voor) === normName(M(x.who)?.name)) : null);
 const SCHOOL_KINDS = ["Huiswerk","Toets","Opdracht","Oefenen","Meebrengen"];
 const KIND_EMO = {Huiswerk:"📚", Toets:"📝", Opdracht:"🎨", Oefenen:"✏️", Meebrengen:"🎒"};
 function dueChip(x){
@@ -926,7 +932,7 @@ function dueChip(x){
 function schoolRows(list){
   if (!list.length) return empty(kidView() ? "Je hebt geen schooltaken. Goed bezig! 🎉" : "Geen schooltaken. Voeg huiswerk, een toets of iets om mee te brengen toe.");
   return `<div class="list">` + list.map(x => {
-    const m = M(x.who), oef = OEFENINGEN.find(o => o.id === x.oef);
+    const m = M(x.who), oef = oefFor(x);
     return `<div class="row ${x.done ? "done" : ""}"><input type="checkbox" class="check" data-school="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.title)} afvinken">
       <div class="grow"><div ${kidView() ? "" : `class="click" data-edit="school:${x.id}" style="cursor:pointer"`}><div class="t">${KIND_EMO[x.kind] || "📚"} ${esc(x.title)}</div><div class="s">${[x.kind, x.vak, x.note].filter(Boolean).map(esc).join(" · ")}</div></div>
       <div class="smeta">${dueChip(x)}${oef && !x.done ? `<button class="btn sm" data-oef="${oef.id}" data-for="${esc(x.who || "")}">✏️ Oefenen</button>` : ""}</div></div>${m ? avatar(m) : ""}</div>`;
@@ -948,14 +954,14 @@ function vSchool(){
     <div class="card"><h3><span class="tag">Te doen</span><span class="pill n num">${open.length}</span></h3>${schoolRows(open)}
       ${done.length ? `<details class="donebox"><summary>Afgewerkt (${done.length})</summary>${schoolRows(done)}</details>` : ""}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Oefeningen</span></h3>
-      <div class="oefgrid">${OEFENINGEN.map(o => `<button class="oeftile" data-oef="${o.id}"><span class="oefemo">${o.emoji}</span><b>${esc(o.title)}</b><span class="s">${esc(o.sub)}</span><span class="pill pts">Openen</span></button>`).join("")}</div>
+      <div class="oefgrid">${oefVisible().length ? oefVisible().map(o => { const om = oefMember(o); return `<button class="oeftile" data-oef="${o.id}"><span class="oefemo">${o.emoji}</span><b>${esc(o.title)}</b>${o.voor ? `<span class="oefwho">${om ? avatar(om) : ""} Voor ${esc(o.voor)}</span>` : ""}<span class="s">${esc(o.sub)}</span><span class="pill pts">Openen</span></button>`; }).join("") : empty("Nog geen oefeningen voor jou.")}</div>
       ${stars.length ? `<div class="label" style="margin-top:14px">Oefensterren</div>${stars.sort((a, b) => b.oefenSterren - a.oefenSterren).map(m => `<div class="rank">${avatar(m)}<span style="flex:1;font-weight:800">${esc(m.name)}</span><span class="pill pts num">★ ${+m.oefenSterren}</span></div>`).join("")}` : `<p class="s" style="color:var(--muted);font-weight:700;margin:12px 0 0">Elke juiste oefening geeft een oefensterretje. Die tellen apart van de punten voor huistaken.</p>`}
     </div>
   </div>`;
 }
 function openOef(id, forWho){
   const o = OEFENINGEN.find(x => x.id === id); if (!o) return;
-  const m = M(forWho) || (who !== "all" ? M(who) : null);
+  const m = (o.voor && oefMember(o)) || M(forWho) || (who !== "all" ? M(who) : null);
   const url = o.file + (m ? "?speler=" + encodeURIComponent(m.name) : "") + "#start";
   const el = $("#oefen");
   el.innerHTML = `<div class="oefbar"><button class="btn ghost sm" data-act="oefclose">← Terug naar de Bende</button><b>${o.emoji} ${esc(o.title)}</b>${m ? `<span class="oefwho">${avatar(m)} ${esc(m.name)}</span>` : ""}</div><iframe src="${esc(url)}" title="${esc(o.title)}"></iframe>`;
@@ -1050,7 +1056,7 @@ const FORMS = {
       ...(cals.length ? [{k:"gcal",l:"In welke Google-agenda?",t:"select",o:[...cals.map(c => [c.name, c.name]), ["", "Niet in Google, alleen in de app"]]},{k:"duration",l:"Duur in minuten",t:"number"}] : []),
       {k:"who",l:cals.length ? "Voor wie (alleen bij 'Niet in Google')" : "Voor wie (leeg = iedereen)",t:"members"},{k:"note",l:"Notitie",t:"textarea"}],
       def:{date:today(), who: who!=="all"?[who]:[], gcal:defCal, duration:60}}; },
-  school: () => ({title:"Schooltaak", fields:[{k:"title",l:"Wat moet er gebeuren?",req:1},{k:"kind",l:"Soort",t:"select",o:SCHOOL_KINDS.map(x=>[x,x])},{k:"vak",l:"Vak (optioneel)"},{k:"who",l:"Voor wie",t:"select",o:memberOpts("—")},{k:"due",l:"Tegen wanneer",t:"date"},{k:"oef",l:"Oefening erbij (optioneel)",t:"select",o:[["","Geen"],...OEFENINGEN.map(o=>[o.id,o.title])]},{k:"note",l:"Notitie",t:"textarea"}], def:{kind:"Huiswerk", who: who!=="all"?who:"", due:addDays(today(),1), done:false}}),
+  school: () => ({title:"Schooltaak", fields:[{k:"title",l:"Wat moet er gebeuren?",req:1},{k:"kind",l:"Soort",t:"select",o:SCHOOL_KINDS.map(x=>[x,x])},{k:"vak",l:"Vak (optioneel)"},{k:"who",l:"Voor wie",t:"select",o:memberOpts("—")},{k:"due",l:"Tegen wanneer",t:"date"},{k:"oef",l:"Oefening erbij (optioneel)",t:"select",o:[["","Geen"],...OEFENINGEN.map(o=>[o.id,o.title + (o.voor ? ` (${o.voor})` : "")])]},{k:"note",l:"Notitie",t:"textarea"}], def:{kind:"Huiswerk", who: who!=="all"?who:"", due:addDays(today(),1), done:false}}),
   tasks: () => ({title:"Taak", fields:[{k:"title",l:"Taak",req:1},{k:"who",l:"Wie",t:"select",o:memberOpts("Wie wil")},{k:"repeat",l:"Herhaling",t:"select",o:[["none","Eenmalig"],["daily","Elke dag"],["weekly","Elke week"]]},{k:"due",l:"Tegen (optioneel)",t:"date"},{k:"points",l:"Punten",t:"number"}], def:{repeat:"weekly", who: who!=="all"?who:"", points:5}}),
   expenses: () => ({title:"Uitgave", fields:[{k:"desc",l:"Omschrijving",req:1},{k:"amount",l:"Bedrag (€)",t:"number",req:1},{k:"cat",l:"Categorie",t:"select",o:["Boodschappen","Wonen","Auto","Kinderen","School","Vrije tijd","Kleding","Gezondheid","Cadeaus","Overig"].map(x=>[x,x])},{k:"date",l:"Datum",t:"date",req:1},{k:"who",l:"Betaald door",t:"select",o:memberOpts("—")}], def:{date:today(), cat:"Boodschappen", who: who!=="all"?who:""}}),
   costs: () => ({title:"Vaste last", fields:[{k:"name",l:"Naam",req:1},{k:"amount",l:"Bedrag (€)",t:"number",req:1},{k:"freq",l:"Per",t:"select",o:[["maand","Maand"],["kwartaal","Kwartaal"],["jaar","Jaar"]]},{k:"cat",l:"Categorie",t:"select",o:["Wonen","Energie","Verzekering","Abonnementen","Auto","School","Overig"].map(x=>[x,x])},{k:"day",l:"Dag van de maand",t:"number"}], def:{freq:"maand", cat:"Wonen"}}),
