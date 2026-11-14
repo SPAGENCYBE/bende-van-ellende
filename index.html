@@ -352,6 +352,12 @@ body.chatfull nav.tabs{display:none}
 }
 @media (min-width:1700px){ body{zoom:1.15} }
 @media (min-width:2300px){ .homegrid{column-count:4} body{zoom:1.35} }
+
+/* ---- scrollknoppen in een widget ---- */
+.scrollbtns{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;flex-direction:column;gap:10px}
+.scrollbtns button{width:clamp(48px,4.2vw,72px);height:clamp(48px,4.2vw,72px);border-radius:50%;border:var(--bw) solid var(--shade);background:var(--sec);color:#1c1530;font-size:clamp(18px,1.6vw,28px);font-weight:900;box-shadow:3px 3px 0 var(--shade);display:grid;place-items:center}
+.scrollbtns button:disabled{opacity:.35}
+@media (max-width:720px){ .scrollbtns{bottom:calc(86px + env(safe-area-inset-bottom,0px))} }
 /* ---- school ---- */
 .prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
 .prog:first-of-type{border-top:0;padding-top:0}
@@ -407,6 +413,7 @@ nav.tabs .sml{display:none}
 </div>
 <div class="oefen" id="oefen" hidden></div>
 <div id="modal"></div>
+<div class="scrollbtns" id="scrollbtns" hidden><button type="button" data-act="scrollup" aria-label="Omhoog scrollen">▲</button><button type="button" data-act="scrolldown" aria-label="Omlaag scrollen">▼</button></div>
 <div class="toast" id="toast" hidden></div>
 <script src="firebase-config.js"></script>
 <script>
@@ -1027,7 +1034,7 @@ function render(){
   const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, school:vSchool, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
-  loadPhotos(); pushOefState();
+  loadPhotos(); pushOefState(); setTimeout(updScrollBtns, 50);
   const log = $("#chatlog");
   if (log) { sizeChat(); log.scrollTop = (chatStick || atBottom) ? log.scrollHeight : oldTop; chatStick = false; }
 }
@@ -1428,6 +1435,7 @@ document.addEventListener("click", e => {
   if (d.pick) { const go = () => { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); viewWho = "all"; store.set("bve-view", "all"); pushSync(); $("#picker").hidden = true; tab = "home"; render(); }; if (d.gate && locked(d.pick)) return askPin(go, "Een profiel kiezen kan alleen met de ouderpincode."); go(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "chatback") { if (history.state && history.state.bveChat) { history.back(); return; } mChatOpen = false; render(); window.scrollTo({top:0}); return; }
+  if (d.act === "scrollup" || d.act === "scrolldown") { const box = !$("#wall").hidden ? $("#wall") : null, h = (box ? box.clientHeight : innerHeight) * .7 * (d.act === "scrollup" ? -1 : 1); (box || window).scrollBy({top: h, behavior: "smooth"}); setTimeout(updScrollBtns, 450); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "oefclose") return closeOef();
   if (d.act === "picker") return parentPin() && localStorage.getItem("bve-picked") === "1" ? askPin(openPicker, "Het profiel van dit toestel wisselen kan alleen met de ouderpincode.") : openPicker();
@@ -1480,6 +1488,16 @@ document.addEventListener("submit", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#oefen").hidden) closeOef(); else if ($("#modal").innerHTML) closeSheet(); else if (wallOpen) toggleWall(); } });
 $("#loginForm").addEventListener("submit", doLogin);
+// Scrollknoppen: in een widget (Vuenara-scherm) of op een scherm zonder scrollwiel/aanraken.
+const EMBEDDED = window.self !== window.top;
+function updScrollBtns(){
+  const el = $("#scrollbtns"); if (!el) return;
+  const show = EMBEDDED && !document.body.classList.contains("chatfull") && $("#oefen").hidden && document.documentElement.scrollHeight > innerHeight + 24;
+  el.hidden = !show;
+  if (show) { el.querySelector('[data-act="scrollup"]').disabled = scrollY < 8; el.querySelector('[data-act="scrolldown"]').disabled = scrollY + innerHeight >= document.documentElement.scrollHeight - 8; }
+}
+window.addEventListener("scroll", () => updScrollBtns(), {passive: true});
+window.addEventListener("resize", () => updScrollBtns());
 // In een afgeschermd venster (bv. de Webpagina-widget van Vuenara) blokkeert de browser formulieren.
 // Daarom sturen we het "versturen" zelf door, met dezelfde controle op verplichte velden.
 if (window.self !== window.top) {
