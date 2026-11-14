@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wereldoriëntatie · Alexis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f7f6;--ink:#1f2a2b;--muted:#5f6d6e;--brand:#e8762d;--brand-soft:#ffe8d6;--teal:#1f7a78;--teal-soft:#dff1ef;--ok:#24935a;--ok-soft:#dcf5e7;--bad:#d23f3f;--bad-soft:#fde3e3;--warn:#a86b12;--warn-soft:#fff3d6;--blue:#2f6fd6;--r:16px}
+*{box-sizing:border-box}
+body{margin:0;font-family:Nunito,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.5}
+header{background:linear-gradient(135deg,#145a58,#1f7a78 55%,#e8762d);color:#fff;padding:22px 20px 18px}
+.wrap{max-width:1040px;margin:0 auto}
+header h1{margin:0;font-size:clamp(23px,4vw,33px);font-weight:900}
+header p{margin:4px 0 0;opacity:.93;font-weight:600}
+.stars{display:inline-flex;gap:14px;margin-top:12px;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.5);padding:7px 16px;border-radius:999px;font-weight:800}
+nav{position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid var(--teal-soft)}
+nav .wrap{display:flex;gap:6px;overflow-x:auto;padding:8px 12px}
+nav button{flex:0 0 auto;font:inherit;font-weight:800;border:0;background:transparent;color:var(--muted);padding:9px 14px;border-radius:12px;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--teal-soft);color:var(--teal)}
+main{padding:18px 14px 60px}
+section.view{display:none}section.view.on{display:block}
+h2{font-size:28px;font-weight:900;margin:8px 0 4px}
+.sub{color:var(--muted);margin:0 0 16px;font-weight:600}
+h3{font-size:20px;font-weight:900;margin:0 0 8px}
+.box{background:#fff;border-radius:var(--r);padding:18px 20px;margin:14px 0;box-shadow:0 4px 14px rgba(31,122,120,.08)}
+.box.learn{border-left:6px solid var(--teal)}
+.box.watch{border-left:6px solid var(--warn);background:#fffaf0}
+.box.wist{border-left:6px solid #e0b500;background:#fffbe3}
+.box p{margin:6px 0}
+ul.tight{margin:6px 0;padding-left:22px}ul.tight li{margin:4px 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.kind{border-radius:14px;padding:12px 14px;background:var(--bg)}
+.kind b{display:block;font-size:17px}
+.term{font-weight:900;color:var(--teal)}
+table.t{border-collapse:collapse;width:100%;margin:6px 0}
+table.t th,table.t td{padding:8px 10px;border-bottom:1px solid #e3ecea;text-align:left;vertical-align:top}
+table.t th{color:var(--teal);font-weight:900}
+.timeline{display:flex;border-radius:12px;overflow:hidden;margin:10px 0 4px;font-weight:800;font-size:15px;color:#fff;text-align:center}
+.timeline div{padding:10px 6px}
+.tl-years{display:flex;justify-content:space-between;font-weight:800;font-size:14px;color:var(--muted)}
+.ev{display:flex;gap:12px;align-items:flex-start;margin:8px 0}
+.ev b.y{flex:0 0 auto;background:var(--teal);color:#fff;border-radius:8px;padding:2px 9px;font-size:15px}
+.set{margin:22px 0 8px}
+.set-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.again{font:inherit;font-weight:800;border:2px solid var(--teal);color:var(--teal);background:#fff;padding:6px 14px;border-radius:999px;cursor:pointer}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.q{background:#fff;border-radius:var(--r);padding:14px 16px;border:2px solid transparent;box-shadow:0 2px 10px rgba(31,122,120,.08)}
+.q.wide{grid-column:1/-1}
+.q.solved{border-color:var(--ok);background:#fbfffc}
+.tag{display:inline-block;font-size:13px;font-weight:900;color:var(--teal);background:var(--teal-soft);padding:2px 10px;border-radius:999px;margin-bottom:6px}
+.prompt{font-weight:700;font-size:18px}
+.bank{font-size:14px;color:var(--muted);font-weight:700;margin-top:4px}
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.ch{font:inherit;font-weight:800;border:2px solid #cfdcda;background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--ink);text-align:left}
+.ch.good{border-color:var(--ok);background:var(--ok-soft)}.ch.bad{border-color:var(--bad);background:var(--bad-soft)}
+input.txt{font:inherit;font-weight:800;font-size:18px;padding:7px 10px;border:2px solid #cfdcda;border-radius:10px;width:100%;max-width:320px;margin:10px 0}
+input.txt.year{max-width:120px}
+input.good,select.good{border-color:var(--ok)!important;background:var(--ok-soft)}
+input.bad,select.bad{border-color:var(--bad)!important;background:var(--bad-soft)}
+.check{font:inherit;font-weight:900;background:var(--brand);color:#fff;border:0;padding:8px 18px;border-radius:10px;cursor:pointer}
+.q.solved .check,.q.solved .reset{display:none}
+.reset{font:inherit;font-weight:800;background:#fff;border:2px solid #cfdcda;padding:6px 14px;border-radius:10px;cursor:pointer;margin-left:6px}
+.rows{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:6px 10px;font-weight:700}
+.row select{font:inherit;font-weight:800;padding:5px 8px;border-radius:8px;border:2px solid #cfdcda;background:#fff}
+.ord{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.ordb{font:inherit;font-weight:700;text-align:left;border:2px solid #cfdcda;background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer;display:flex;gap:10px;align-items:center;color:var(--ink)}
+.ordb .nr{flex:0 0 28px;height:28px;border-radius:50%;background:#e9efee;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--muted)}
+.ordb.set .nr{background:var(--teal);color:#fff}
+textarea{font:inherit;width:100%;min-height:90px;border:2px solid #cfdcda;border-radius:10px;padding:8px 10px;margin:10px 0}
+.fb{margin-top:8px;border-radius:10px;font-weight:600}
+.fb:empty{display:none}
+.fb.good{background:var(--ok-soft);padding:9px 12px;color:#155c37}
+.fb.bad{background:var(--bad-soft);padding:9px 12px;color:#8c2222}
+.fb.warn{background:var(--warn-soft);padding:9px 12px;color:#7a5212}
+.fb.info{background:var(--teal-soft);padding:9px 12px;color:#134c4a}
+.fb summary{cursor:pointer;font-weight:800}
+.btn{font:inherit;font-weight:900;background:var(--brand);color:#fff;border:0;padding:11px 20px;border-radius:12px;cursor:pointer}
+.btn.alt{background:#fff;color:var(--teal);border:2px solid var(--teal)}
+.result{font-size:20px;font-weight:900;padding:14px 18px;border-radius:14px;background:var(--ok-soft);color:#155c37;margin:12px 0}
+.result:empty{display:none}
+.start-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tile{background:#fff;border-radius:var(--r);padding:16px;cursor:pointer;border:2px solid transparent;box-shadow:0 2px 10px rgba(31,122,120,.08);text-align:left;font:inherit}
+.tile:hover{border-color:var(--teal)}
+.tile b{display:block;font-size:19px;font-weight:900}.tile span{color:var(--muted);font-weight:600}
+.emoji{font-size:28px}
+@media (max-width:520px){.qgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>🌍 Wereldoriëntatie · Alexis</h1>
+  <p>Vluchten, trekvogels, WO I, WO II en racisme: uitleg, oefeningen en een grote test</p>
+  <div class="stars" id="stars"></div>
+</div></header>
+<nav><div class="wrap" id="tabs">
+  <button data-v="start">🏠 Start</button>
+  <button data-v="t1">🕊️ Vluchten &amp; trekken</button>
+  <button data-v="t2">⚔️ WO I</button>
+  <button data-v="t3">📔 WO II</button>
+  <button data-v="t4">✊ Racisme</button>
+  <button data-v="test">🏆 Grote test</button>
+  <button data-v="spiek">📋 Spiekbrief</button>
+</div></nav>
+<main><div class="wrap">
+
+<section class="view" id="v-start">
+  <h2>Hallo Alexis! 👋</h2>
+  <p class="sub">Elke juiste oefening levert je 1 ⭐ op. Hoeveel sterren verzamel jij?</p>
+  <div class="start-grid">
+    <button class="tile" data-go="t1"><div class="emoji">🕊️</div><b>Vluchten &amp; trekken</b><span>vluchtelingen, asiel, trekvogels en standvogels</span></button>
+    <button class="tile" data-go="t2"><div class="emoji">⚔️</div><b>Eerste Wereldoorlog</b><span>bondgenoten, Von Schlieffenplan, de IJzer, loopgraven</span></button>
+    <button class="tile" data-go="t3"><div class="emoji">📔</div><b>Tweede Wereldoorlog</b><span>Hitler, de Jodenster, Anne Frank, tijdlijn</span></button>
+    <button class="tile" data-go="t4"><div class="emoji">✊</div><b>Racisme &amp; gelijkwaardigheid</b><span>vooroordeel, discriminatie, King, Parks, Mandela</span></button>
+    <button class="tile" data-go="test"><div class="emoji">🏆</div><b>Grote test</b><span>12 vragen door elkaar</span></button>
+  </div>
+  <div class="box learn">
+    <h3>Zo werkt het</h3>
+    <ul class="tight">
+      <li>Lees eerst de <b>uitleg</b> van een thema. Daarna maak je de <b>oefeningen</b>.</li>
+      <li>Fout? Dan krijg je eerst een tip. Bij de tweede keer zie je het juiste antwoord.</li>
+      <li>Bij typvragen maakt een klein schrijffoutje niet uit, maar je ziet wel hoe je het correct schrijft.</li>
+      <li>Met <b>🔄 Nieuwe vragen</b> krijg je telkens andere vragen.</li>
+      <li>Bij <b>💬 Denkvragen</b> is er geen fout antwoord. Schrijf op wat jij denkt en vergelijk met het voorbeeld.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- THEMA 1 -->
+<section class="view" id="v-t1">
+  <h2>🕊️ Vluchten &amp; trekken</h2>
+  <p class="sub">Mensen én dieren gaan soms op weg naar een andere plek. Maar om heel andere redenen!</p>
+  <div class="box learn">
+    <h3>📖 Vluchtelingen</h3>
+    <p>Een <span class="term">vluchteling</span> is iemand die zijn dorp, stad of land moet verlaten omdat het daar <b>niet veilig</b> is, bijvoorbeeld door oorlog, of omdat hij vervolgd wordt om zijn geloof, mening of afkomst. In hun eigen land krijgen ze <b>niet de bescherming</b> die ze nodig hebben.</p>
+    <ul class="tight">
+      <li>Komen ze aan in een ander land en willen ze daar blijven? Dat mag niet zomaar. Ze moeten <b>toelating</b> vragen: ze vragen <span class="term">asiel</span> aan.</li>
+      <li>Iemand die asiel aanvraagt, noemen we een <span class="term">asielzoeker</span>.</li>
+      <li>Dan wordt <b>onderzocht</b> of het in hun thuisland echt te onveilig is om terug te keren.</li>
+      <li>Ondertussen wonen ze meestal in een <span class="term">opvangcentrum</span>.</li>
+    </ul>
+    <p><b>Een lange, gevaarlijke tocht:</b> vluchtelingen leggen vaak heel lange afstanden af. Ze gaan te voet, verstoppen zich in de laadbak van een vrachtwagen of zitten dagenlang op zee in een bootje. Ze riskeren hun leven. Uit welke landen de meeste vluchtelingen komen, verandert voortdurend, want dat hangt af van waar er oorlog of gevaar is.</p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Trekvogels en hun familie</h3>
+    <table class="t">
+      <tr><th>Soort</th><th>Wat doet hij?</th><th>Voorbeelden</th></tr>
+      <tr><td class="term">Trekvogel</td><td>Verlaat zijn leefgebied in de herfst om warme plaatsen op te zoeken.</td><td>zwaluw, nachtegaal</td></tr>
+      <tr><td class="term">Standvogel</td><td>Blijft de hele winter hier.</td><td>specht, fazant, ekster, koolmees</td></tr>
+      <tr><td class="term">Deeltrekker</td><td>Sommigen van de soort trekken weg, anderen blijven.</td><td>gans (grauwe gans), reiger, roodborstje</td></tr>
+      <tr><td class="term">Wintergast</td><td>Komt in de <b>winter</b> naar hier (bv. uit het koude Noorwegen).</td><td></td></tr>
+      <tr><td class="term">Zomergast</td><td>Komt in de <b>zomer</b> naar onze streken en vertrekt in de herfst naar het zuiden.</td><td>zwaluw</td></tr>
+      <tr><td class="term">Doortrekker</td><td>Houdt op zijn weg naar het zuiden <b>even halt</b> in ons land.</td><td>visarend</td></tr>
+    </table>
+    <p>De <b>kievit</b> is speciaal: hij is zowel een <b>standvogel</b> als een <b>zomergast</b>.</p>
+  </div>
+  <div class="box watch">
+    <h3>⚠️ Pas op!</h3>
+    <ul class="tight">
+      <li><b>Winter</b>gast = komt in de <b>winter</b> naar België. <b>Zomer</b>gast = komt in de <b>zomer</b> naar België. Kijk naar wanneer hij <i>hier</i> is.</li>
+      <li>Schrijf correct: <b>deeltrekker</b> · <b>doortrekker</b> · <b>visarend</b> · <b>koolmees</b> · <b>kievit</b> · <b>grauwe gans</b> · <b>groene specht</b></li>
+      <li>Asiel<b>zoeker</b> = de persoon. Asiel <b>aanvragen</b> = wat hij doet.</li>
+    </ul>
+  </div>
+  <div id="sets-t1"></div>
+</section>
+
+<!-- THEMA 2 -->
+<section class="view" id="v-t2">
+  <h2>⚔️ De Eerste Wereldoorlog (1914 – 1918)</h2>
+  <p class="sub">In 1914 waren er in Europa heel wat conflicten aan de gang.</p>
+  <div class="box learn">
+    <h3>📖 Waar past WO I op de tijdband?</h3>
+    <div class="timeline">
+      <div style="flex:3;background:#4a90c8">prehistorie | oudheid</div>
+      <div style="flex:3;background:#7cad3c">middeleeuwen</div>
+      <div style="flex:2.2;background:#e89a2c">nieuwe tijden</div>
+      <div style="flex:1;background:#d0453a">onze tijd</div>
+    </div>
+    <div class="tl-years"><span>3800 v.Chr.</span><span>500</span><span>1500</span><span>1945</span><span>nu</span></div>
+    <p>Zo staat het op de tijdband in jullie werkboek: de middeleeuwen lopen van <b>500 tot 1500</b>, de nieuwe tijden van <b>1500 tot 1945</b>, en daarna begint <b>onze tijd</b>. WO I (1914–1918) valt dus in de <b>nieuwe tijden</b>, in de <b>20e eeuw</b>.</p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Waarom was er ruzie?</h3>
+    <ul class="tight">
+      <li><b>Duitsland</b> wilde meer kolonies.</li>
+      <li><b>Frankrijk</b> was nog boos over zijn nederlaag in de Frans-Duitse oorlog van <b>1870</b>.</li>
+      <li>De Duitse vloot werd een bedreiging voor de <b>Engelsen</b>.</li>
+      <li><b>Oostenrijk-Hongarije</b> voegde Bosnië-Herzegovina toe (in 1908).</li>
+    </ul>
+    <p>Landen zochten <span class="term">bondgenoten</span>: landen die beloven elkaar te helpen bij een conflict. Zo ontstonden twee machtsblokken:</p>
+    <div class="grid2">
+      <div class="kind"><b>🤝 De geallieerden</b>Frankrijk · Verenigd Koninkrijk · Rusland</div>
+      <div class="kind"><b>⚙️ De centralen</b>Duitsland · Oostenrijk-Hongarije · Ottomaanse Rijk · Bulgarije</div>
+    </div>
+  </div>
+  <div class="box learn">
+    <h3>📖 Het Von Schlieffenplan</h3>
+    <div class="ev"><b class="y">2 aug 1914</b><span>Duitsland eist van <b>België</b> een doortocht om Frankrijk in het noorden aan te vallen. Duitsland wil Frankrijk binnen <b>zeven weken</b> verslaan en daarna ten strijde trekken tegen <b>Rusland</b>. Dat plan heet het <span class="term">Von Schlieffenplan</span>.</span></div>
+    <div class="ev"><b class="y">weigering</b><span>België is een <b>neutraal</b> land (het kiest geen kant). Daarom weigert koning <b>Albert I</b> de doortocht.</span></div>
+    <div class="ev"><b class="y">4 aug 1914</b><span>Duitsland valt België binnen. Het plan mislukt: de Belgen trekken terug tot achter de <b>IJzer</b> en houden daar stand.</span></div>
+    <div class="ev"><b class="y">1914 – 1918</b><span>Het gevolg is een <span class="term">loopgravenoorlog</span> die <b>vier jaar</b> duurt.</span></div>
+  </div>
+  <div class="box wist"><h3>💡 Wist je dat?</h3><p>Tijdens WO I vluchtten <b>honderdduizenden Belgen</b> naar Nederland, op zoek naar veiligheid. Toen waren Belgen dus zelf vluchtelingen!</p></div>
+  <div class="box watch">
+    <h3>⚠️ Pas op!</h3>
+    <ul class="tight">
+      <li>WO I: <b>1914 – 1918</b>. WO II: <b>1939 – 1945</b>. Haal ze niet door elkaar!</li>
+      <li>Schrijf correct: <b>geallieerden</b> · <b>Verenigd Koninkrijk</b> · <b>Oostenrijk-Hongarije</b> · <b>Ottomaanse Rijk</b> · <b>Bulgarije</b> · <b>Von Schlieffenplan</b> · <b>loopgravenoorlog</b></li>
+    </ul>
+  </div>
+  <div id="sets-t2"></div>
+</section>
+
+<!-- THEMA 3 -->
+<section class="view" id="v-t3">
+  <h2>📔 De Tweede Wereldoorlog (1939 – 1945)</h2>
+  <p class="sub">Een oorlog waarin miljoenen mensen werden uitgesloten, vervolgd en vermoord.</p>
+  <div class="box learn">
+    <h3>📖 De belangrijkste jaartallen</h3>
+    <div class="ev"><b class="y">1918</b><span>Duitsland heeft WO I verloren. Het land zit in een grote <b>crisis</b> (armoede, werkloosheid).</span></div>
+    <div class="ev"><b class="y">1933</b><span><b>Adolf Hitler</b> komt aan de macht. Hij maakt van Duitsland een <b>dictatuur</b>.</span></div>
+    <div class="ev"><b class="y">1939</b><span><b>Start van WO II</b>: Duitsland valt Polen binnen.</span></div>
+    <div class="ev"><b class="y">1940</b><span><b>Start van WO II in België</b>: Duitsland valt België binnen (10 mei). Na 18 dagen geeft België zich over.</span></div>
+    <div class="ev"><b class="y">1942</b><span>Anne Frank en haar familie duiken onder in het <b>Achterhuis</b>.</span></div>
+    <div class="ev"><b class="y">1944</b><span>België wordt bevrijd (september).</span></div>
+    <div class="ev"><b class="y">1945</b><span><b>Einde van WO II</b>. Op de tijdband begint hier <b>onze tijd</b>.</span></div>
+  </div>
+  <div class="box learn">
+    <h3>📖 Adolf Hitler</h3>
+    <ul class="tight">
+      <li>Regeerde als <span class="term">dictator</span> (alleenheerser) tijdens WO II.</li>
+      <li>Stond aan het hoofd van de <span class="term">nazipartij</span>.</li>
+      <li>Veel mensen volgden hem, omdat hij <b>oplossingen beloofde voor de crisis</b> in Duitsland.</li>
+      <li>Hij riep op tot <b>rassenhaat</b> en <b>discriminatie</b> van mensen die 'anders' waren.</li>
+      <li>Men begroette hem met de <b>Hitlergroet</b>. Zijn symbool was het <b>hakenkruis</b>.</li>
+    </ul>
+    <p>Daarom de les: <i>wie te veel macht krijgt, kan die macht misbruiken.</i></p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Getekend: de Jodenster</h3>
+    <p>Tijdens WO II moesten <b>Joden</b> (mensen die volgens hun geloof bij het jodendom horen) in Duitsland en de bezette gebieden een <span class="term">Jodenster</span> dragen. Die gele ster is gebaseerd op de <b>davidster</b>, een oud symbool van het jodendom. Hitler en zijn volgelingen wilden zo laten zien dat Joden niet gewenst waren.</p>
+    <p>Er kwamen steeds meer <b>Jodenwetten</b>. Joden moesten hun fiets afgeven, mochten niet met de tram, mochten alleen van 15 tot 17 uur boodschappen doen, mochten van 20 uur tot 6 uur niet op straat, mochten niet naar het zwembad, de bioscoop of sportplaatsen, en moesten naar Joodse scholen.</p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Anne Frank: een bijzonder meisje</h3>
+    <table class="t">
+      <tr><th>Naam</th><td>Anne Frank</td></tr>
+      <tr><th>Geloof</th><td>joods (jodendom)</td></tr>
+      <tr><th>Woonde in</th><td>Amsterdam, Nederland (haar familie was uit Duitsland gevlucht)</td></tr>
+      <tr><th>Ging onderduiken in</th><td><b>het Achterhuis</b>: een verborgen deel van een gebouw, met de ingang achter een draaiende <b>boekenkast</b></td></tr>
+      <tr><th>Beschreef haar oorlogservaringen in</th><td>een <b>dagboek</b> (later uitgegeven als het boek <i>Het Achterhuis</i>)</td></tr>
+      <tr><th>Bracht het einde van haar leven door in</th><td>een <b>concentratiekamp</b></td></tr>
+    </table>
+    <p><span class="term">Onderduiken</span> = je verstoppen zodat niemand je kan vinden.</p>
+  </div>
+  <div class="box watch">
+    <h3>⚠️ Pas op!</h3>
+    <ul class="tight">
+      <li>Start WO II = <b>1939</b>, maar in <b>België</b> begint de oorlog pas in <b>1940</b>.</li>
+      <li>Het Achterhuis schrijf je met een hoofdletter: <b>het Achterhuis</b>.</li>
+      <li>Schrijf correct: <b>concentratiekamp</b> · <b>dictator</b> · <b>nazipartij</b> · <b>jodendom</b></li>
+    </ul>
+  </div>
+  <div id="sets-t3"></div>
+</section>
+
+<!-- THEMA 4 -->
+<section class="view" id="v-t4">
+  <h2>✊ Racisme &amp; gelijkwaardigheid</h2>
+  <p class="sub">Iedereen is evenveel waard, maar niet iedereen wordt zo behandeld.</p>
+  <div class="box learn">
+    <h3>📖 Drie belangrijke woorden</h3>
+    <div class="grid2">
+      <div class="kind"><b>💭 Vooroordeel</b>Een mening over een (groep) mensen die gebaseerd is op een <b>mening</b> en niet op <b>bewijzen</b> of feiten. Bv. "Alle … zijn lui."</div>
+      <div class="kind"><b>🚫 Discriminatie</b>Anderen <b>ongelijk behandelen</b> op basis van ras, huidskleur, nationaliteit, geloof, rijkdom, geslacht …</div>
+      <div class="kind"><b>✋🏿 Racisme</b>Een <b>specifieke vorm van discriminatie</b>: op basis van afkomst, ras, huidskleur of nationaliteit.</div>
+    </div>
+    <p style="margin-top:10px"><b>Het verband:</b> vooroordelen kunnen leiden tot discriminatie. Racisme is altijd discriminatie, maar niet alle discriminatie is racisme (bv. iemand uitsluiten omdat ze een meisje is).</p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Racisme of niet? De karikatuur in Suske en Wiske</h3>
+    <p>Een <span class="term">karikatuur</span> is een tekening waarin bepaalde kenmerken van iemand <b>overdreven</b> worden getekend.</p>
+    <p>In een album van Suske en Wiske (2019) kreeg een tekening kritiek: de lippen van een zwarte man waren ouderwets en overdreven dik getekend. Auteur Dalilla Hermans (geboren in Rwanda, opgegroeid in Vlaanderen) vond dat pijnlijk, omdat zulke prenten doen denken aan racistische tekeningen uit het <b>koloniale</b> verleden. De uitgeverij zei dat ze zich <b>niet bewust</b> was van de impact en bood haar excuses aan.</p>
+  </div>
+  <div class="box learn">
+    <h3>📖 Strijders voor gelijkwaardigheid</h3>
+    <table class="t">
+      <tr><th>Wie</th><th>Wat moet je weten?</th></tr>
+      <tr><td class="term">Martin Luther King</td><td>Streed voor <b>vrijheid voor zwarten in Amerika</b>. Beroemde toespraak: <b>'I have a dream'</b>. Kreeg de <b>Nobelprijs voor de Vrede</b>. Werd op 4 april 1968 doodgeschoten.</td></tr>
+      <tr><td class="term">Rosa Parks</td><td>Weigerde haar <b>zitplaats in de bus</b> af te staan aan een blanke man. Haar actie leidde tot de <b>Montgomery-busboycot</b>. Bekende uitspraak: 'Ik was niet moe; ik was het moe om altijd te moeten toegeven!'</td></tr>
+      <tr><td class="term">Nelson Mandela</td><td>Zat <b>27 jaar gevangen</b> (op <b>Robbeneiland</b>). Zorgde voor de <b>afschaffing van de apartheid</b>. Werd de <b>eerste zwarte president van Zuid-Afrika</b>. Kreeg ook de <b>Nobelprijs voor de Vrede</b>.</td></tr>
+    </table>
+    <p><span class="term">Apartheid</span> = wetten in Zuid-Afrika die zwarte en blanke mensen van elkaar scheidden. In <b>1964</b> kwam er in de VS dankzij de <b>Civil Rights Act</b> een einde aan de rassenscheiding.</p>
+  </div>
+  <div class="box watch">
+    <h3>⚠️ Pas op!</h3>
+    <ul class="tight">
+      <li>De <b>Nobelprijs voor de Vrede</b> hoort bij <b>twee</b> personen: Martin Luther King én Nelson Mandela.</li>
+      <li>Vooroordeel: gebaseerd op een <b>mening</b>, niet op <b>bewijzen</b>. Schrijf correct: <b>gebaseerd</b>, <b>vooroordeel</b>.</li>
+      <li>Zuid-Afrika ligt helemaal in het <b>zuiden van Afrika</b>.</li>
+    </ul>
+  </div>
+  <div id="sets-t4"></div>
+</section>
+
+<section class="view" id="v-test">
+  <h2>🏆 Grote test</h2>
+  <p class="sub">12 vragen door elkaar uit alle thema's. Alleen wat je <b>in één keer</b> juist hebt, telt mee.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <button class="btn" id="newtest">🎲 Nieuwe test</button>
+    <button class="btn alt" id="scoretest">✅ Bekijk mijn score</button>
+    <span id="best" style="font-weight:700;color:var(--muted)"></span>
+  </div>
+  <div class="result" id="result"></div>
+  <div class="qgrid" id="testgrid" style="margin-top:14px"></div>
+</section>
+
+<section class="view" id="v-spiek">
+  <h2>📋 Spiekbrief</h2>
+  <p class="sub">Alles op één blad, om vlak voor de toets nog eens te lezen.</p>
+  <div class="grid2">
+    <div class="box"><h3>🕊️ Vluchten</h3><ul class="tight"><li><b>Vluchteling</b>: vlucht omdat het thuis niet veilig is</li><li><b>Asiel aanvragen</b>: toelating vragen om te blijven</li><li><b>Asielzoeker</b>: wie asiel aanvraagt</li><li>Woont in een <b>opvangcentrum</b></li><li>Tocht: te voet, vrachtwagen, bootje</li></ul></div>
+    <div class="box"><h3>🐦 Vogels</h3><ul class="tight"><li><b>Trekvogel</b>: zwaluw, nachtegaal</li><li><b>Standvogel</b>: specht, fazant, ekster, koolmees</li><li><b>Deeltrekker</b>: gans, reiger, roodborstje</li><li><b>Wintergast</b>: in de winter hier</li><li><b>Zomergast</b>: in de zomer hier</li><li><b>Doortrekker</b>: even halt (visarend)</li><li><b>Kievit</b>: standvogel én zomergast</li></ul></div>
+    <div class="box"><h3>⚔️ WO I</h3><ul class="tight"><li><b>1914 – 1918</b></li><li>Geallieerden: Frankrijk, VK, Rusland</li><li>Centralen: Duitsland, Oostenrijk-Hongarije, Ottomaanse Rijk, Bulgarije</li><li>Von Schlieffenplan: via België naar Frankrijk</li><li>Koning Albert I weigert (België neutraal)</li><li>4 aug 1914: inval → IJzer → loopgravenoorlog (4 jaar)</li></ul></div>
+    <div class="box"><h3>📔 WO II</h3><ul class="tight"><li>Start <b>1939</b>, in België <b>1940</b>, einde <b>1945</b></li><li>Hitler: dictator, nazipartij, hakenkruis</li><li>Jodenster + Jodenwetten</li><li>Anne Frank: joods, Achterhuis, dagboek, concentratiekamp</li></ul></div>
+    <div class="box"><h3>📅 Tijdband</h3><ul class="tight"><li>Middeleeuwen: 500 – 1500</li><li>Nieuwe tijden: 1500 – 1945</li><li>Onze tijd: vanaf 1945</li><li>WO I en WO II: 20e eeuw</li></ul></div>
+    <div class="box"><h3>✊ Racisme</h3><ul class="tight"><li><b>Vooroordeel</b>: mening, geen bewijzen</li><li><b>Discriminatie</b>: ongelijk behandelen</li><li><b>Racisme</b>: discriminatie op afkomst, ras, huidskleur, nationaliteit</li><li>King: I have a dream · Parks: bus · Mandela: apartheid, Zuid-Afrika</li></ul></div>
+  </div>
+</section>
+
+</div></main>
+
+<script>
+/* ===== helpers ===== */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(de|het|een|in|n)\b/g,' ').replace(/\s+/g,' ').trim();
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){let c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}return p[n];}
+function matchText(input,accept){const x=norm(input);if(!x)return 0;for(const a of accept){const y=norm(a);if(x===y)return 2;}for(const a of accept){const y=norm(a);const tol=y.length>=9?2:y.length>=5?1:0;if(lev(x,y)<=tol)return 1;}return 0;}
+
+/* ===== question pools ===== */
+// types: mc {p,c:[..],a:index,e} · txt {p,acc:[..],show,bank?,e} · year {p,y,e} · tf {p,v:true/false,e} · sort {p,cats,items:[[t,catIndex]],e} · ord {p,items:[...in correct order],e} · open {p,ex}
+const T1=[
+ {t:'mc',p:'Hoe noemen we iemand die zijn land moet verlaten omdat het er niet veilig is?',c:['een toerist','een vluchteling','een migrant op vakantie','een trekvogel'],a:1,e:'Een <b>vluchteling</b> vlucht omdat het thuis niet veilig is en hij er geen bescherming krijgt.'},
+ {t:'mc',p:'Een vluchteling komt aan in een ander land en wil daar blijven. Wat moet hij doen?',c:['Gewoon een huis zoeken','Asiel aanvragen','Een paspoort kopen','Naar school gaan'],a:1,e:'Hij moet <b>toelating vragen</b>: hij vraagt <b>asiel</b> aan.'},
+ {t:'txt',p:'Hoe noemen we iemand die asiel aanvraagt?',acc:['asielzoeker'],show:'asielzoeker',e:'Iemand die asiel aanvraagt, is een <b>asielzoeker</b>.'},
+ {t:'txt',p:'Waar verblijven asielzoekers meestal terwijl hun aanvraag onderzocht wordt?',acc:['opvangcentrum','een opvangcentrum'],show:'opvangcentrum',e:'Ze verblijven meestal in een <b>opvangcentrum</b>.'},
+ {t:'mc',p:'Wat wordt er onderzocht als iemand asiel aanvraagt?',c:['Of hij goed kan voetballen','Of zijn thuisland echt te onveilig is om terug te keren','Hoeveel geld hij heeft','Of hij Nederlands spreekt'],a:1,e:'Men onderzoekt of het <b>thuisland echt onveilig</b> is om naar terug te keren.'},
+ {t:'mc',p:'Welke reden is <b>géén</b> reden om te vluchten?',c:['Er is oorlog','Je wordt vervolgd om je geloof','Je wil op reis naar de zon','Je wordt bedreigd om je mening'],a:2,e:'Op reis gaan is geen vluchten. Vluchtelingen moeten weg omdat ze <b>in gevaar</b> zijn.'},
+ {t:'tf',p:'Vluchtelingen maken vaak een lange en gevaarlijke tocht: te voet, in de laadbak van een vrachtwagen of dagenlang op zee.',v:true,e:'Juist. Ze riskeren vaak hun leven.'},
+ {t:'tf',p:'Vluchtelingen komen altijd uit dezelfde landen.',v:false,e:'Niet waar: waar ze vandaan komen, <b>verandert voortdurend</b>, afhankelijk van waar er oorlog of gevaar is.'},
+ {t:'sort',p:'Welke soort vogel ben ik?',cats:['standvogel','trekvogel/zomergast','wintergast','doortrekker','deeltrekker'],items:[['Ik blijf de hele winter in België.',0],['Ik bouw mijn nest onder het dak van een huis. In de winter vlieg ik naar het zuiden.',1],['In de zomer woon ik in Noorwegen. In de winter kom ik naar België.',2],['Ik vlieg van Noord-Europa naar Afrika en stop onderweg even in België.',3],['Ik blijf hier, maar sommigen van mijn soort trekken weg.',4]],e:'Kijk goed <b>wanneer</b> de vogel in België is en of hij alleen even <b>halt houdt</b>.'},
+ {t:'sort',p:'Zet elke vogel bij de juiste soort.',cats:['standvogel','deeltrekker','trekvogel','doortrekker'],items:[['koolmees',0],['groene specht',0],['ekster',0],['grauwe gans',1],['roodborstje',1],['zwaluw',2],['nachtegaal',2],['visarend',3]],e:'Standvogels: specht, fazant, ekster, koolmees. Deeltrekkers: gans, reiger, roodborstje. Trekvogels: zwaluw, nachtegaal. Doortrekker: visarend.'},
+ {t:'mc',p:'De <b>kievit</b> is een speciale vogel. Wat is hij?',c:['alleen een wintergast','zowel een standvogel als een zomergast','een doortrekker','een deeltrekker'],a:1,e:'De kievit is <b>zowel een standvogel als een zomergast</b>.'},
+ {t:'txt',p:'Hoe noemen we een vogel die in de <b>winter</b> naar België komt?',acc:['wintergast'],show:'wintergast',e:'Komt hij in de winter naar hier? Dan is het een <b>wintergast</b>.'},
+ {t:'txt',p:'Hoe noemen we een vogel die op weg naar het zuiden <b>even halt houdt</b> in ons land?',acc:['doortrekker'],show:'doortrekker',e:'Even stoppen en dan verder = <b>doortrekker</b>.'},
+ {t:'txt',p:'Hoe noemen we een vogel die het hele jaar in België blijft?',acc:['standvogel'],show:'standvogel',e:'Hij blijft op zijn "stand(plaats)": <b>standvogel</b>.'},
+ {t:'mc',p:'Wanneer vertrekken trekvogels naar warmere plaatsen?',c:['in de lente','in de zomer','in de herfst','nooit'],a:2,e:'Trekvogels verlaten hun leefgebied in de <b>herfst</b>.'},
+ {t:'mc',p:'Wat hebben vluchtelingen en trekvogels gemeen, en wat is het grote verschil?',c:['Ze reizen allebei voor hun plezier','Ze gaan allebei op weg, maar vluchtelingen moeten vluchten voor gevaar en trekvogels vertrekken voor warmte en voedsel','Er is geen verschil','Trekvogels moeten asiel aanvragen'],a:1,e:'Allebei maken ze een lange tocht. Maar vluchtelingen <b>moeten</b> weg omdat ze niet veilig zijn.'},
+ {t:'open',p:'💬 Denkvraag: stel dat jij met je familie moet vluchten en maar één rugzak mag meenemen. Wat stop je erin? Waarom?',ex:'Bijvoorbeeld: een foto van mijn familie (om me minder alleen te voelen), water en eten, warme kleren, mijn identiteitskaart (om te tonen wie ik ben), een gsm met oplader.'}
+];
+const T2=[
+ {t:'year',p:'In welk jaar begon de Eerste Wereldoorlog?',y:1914,e:'WO I begon in <b>1914</b>.'},
+ {t:'year',p:'In welk jaar eindigde de Eerste Wereldoorlog?',y:1918,e:'WO I eindigde in <b>1918</b>.'},
+ {t:'year',p:'In welk jaar was de Frans-Duitse oorlog waarin Frankrijk verloor?',y:1870,e:'De Frans-Duitse oorlog was in <b>1870</b>. Frankrijk wilde daarom wraak.'},
+ {t:'sort',p:'Bij welk machtsblok hoort elk land in WO I?',cats:['geallieerden','centralen'],items:[['Frankrijk',0],['Verenigd Koninkrijk',0],['Rusland',0],['Duitsland',1],['Oostenrijk-Hongarije',1],['Ottomaanse Rijk',1],['Bulgarije',1]],e:'Geallieerden: Frankrijk, Verenigd Koninkrijk, Rusland. Centralen: Duitsland, Oostenrijk-Hongarije, Ottomaanse Rijk, Bulgarije.'},
+ {t:'mc',p:'Welk land wilde <b>meer kolonies</b>?',c:['Frankrijk','Duitsland','België','Rusland'],a:1,e:'<b>Duitsland</b> wilde meer kolonies.'},
+ {t:'mc',p:'Welk land was nog boos over zijn nederlaag in de Frans-Duitse oorlog van 1870?',c:['Frankrijk','Engeland','Bulgarije','Oostenrijk-Hongarije'],a:0,e:'<b>Frankrijk</b> had in 1870 verloren van Duitsland.'},
+ {t:'mc',p:'Wie voelde zich bedreigd door de Duitse vloot?',c:['de Russen','de Engelsen','de Belgen','de Bulgaren'],a:1,e:'De Duitse vloot werd een bedreiging voor de <b>Engelsen</b>.'},
+ {t:'mc',p:'Welk land voegde Bosnië-Herzegovina toe aan zijn grondgebied?',c:['Duitsland','Rusland','Oostenrijk-Hongarije','Frankrijk'],a:2,e:'<b>Oostenrijk-Hongarije</b> voegde Bosnië-Herzegovina toe.'},
+ {t:'mc',p:'Wat zijn <b>bondgenoten</b>?',c:['landen die altijd ruzie maken','landen die beloven elkaar te helpen bij een conflict','landen zonder leger','landen in Afrika'],a:1,e:'Bondgenoten beloven elkaar te <b>helpen</b> bij een conflict.'},
+ {t:'txt',p:'Op 2 augustus 1914 eiste Duitsland van … een doortocht om Frankrijk aan te vallen.',acc:['belgie'],show:'België',bank:'Kies uit: Albert I, loopgravenoorlog, 1914, België, Rusland, IJzer, neutraal, Von Schlieffenplan',e:'Duitsland wilde door <b>België</b> naar Frankrijk.'},
+ {t:'txt',p:'Duitsland wilde Frankrijk binnen zeven weken verslaan om daarna ten strijde te trekken tegen …',acc:['rusland'],show:'Rusland',bank:'Kies uit: Albert I, loopgravenoorlog, België, Rusland, IJzer, neutraal, Von Schlieffenplan',e:'Daarna wilde Duitsland tegen <b>Rusland</b> vechten.'},
+ {t:'txt',p:'Hoe noemen we het plan om via België Frankrijk aan te vallen?',acc:['von schlieffenplan','schlieffenplan','von schlieffen plan'],show:'Von Schlieffenplan',bank:'Kies uit: Albert I, loopgravenoorlog, België, Rusland, IJzer, neutraal, Von Schlieffenplan',e:'Het <b>Von Schlieffenplan</b>.'},
+ {t:'mc',p:'Waarom weigerde België de doortocht?',c:['Omdat België een neutraal land was','Omdat België bondgenoot van Duitsland was','Omdat de wegen kapot waren','Omdat België geen koning had'],a:0,e:'België was <b>neutraal</b>: het koos geen kant. Daarom weigerde koning Albert I.'},
+ {t:'txt',p:'Welke koning weigerde de Duitse doortocht?',acc:['albert i','albert 1','albert de eerste','albert','koning albert'],show:'Albert I',e:'Koning <b>Albert I</b> weigerde.'},
+ {t:'mc',p:'Wanneer viel Duitsland België binnen?',c:['4 augustus 1914','10 mei 1940','2 augustus 1918','11 november 1914'],a:0,e:'Op <b>4 augustus 1914</b>. (10 mei 1940 is de inval van WO II!)'},
+ {t:'txt',p:'Achter welke rivier trokken de Belgen zich terug en hielden ze stand?',acc:['ijzer','yzer','de ijzer'],show:'de IJzer',e:'Achter de <b>IJzer</b>.'},
+ {t:'txt',p:'Wat was het gevolg? Een … die vier jaar duurde.',acc:['loopgravenoorlog','loopgraven oorlog'],show:'loopgravenoorlog',e:'Een <b>loopgravenoorlog</b>: soldaten zaten jarenlang in lange grachten (loopgraven) tegenover elkaar.'},
+ {t:'mc',p:'In welke periode op de tijdband van je werkboek valt WO I?',c:['middeleeuwen','nieuwe tijden','onze tijd','oudheid'],a:1,e:'Op jullie tijdband lopen de <b>nieuwe tijden</b> van 1500 tot 1945. WO I (1914–1918) valt daarin.'},
+ {t:'mc',p:'In welke eeuw vond WO I plaats?',c:['18e eeuw','19e eeuw','20e eeuw','21e eeuw'],a:2,e:'1914 ligt in de <b>20e eeuw</b> (1901–2000).'},
+ {t:'year',p:'Tijdband: in welk jaar eindigen de middeleeuwen (en beginnen de nieuwe tijden)?',y:1500,e:'De middeleeuwen lopen van 500 tot <b>1500</b>.'},
+ {t:'year',p:'Tijdband: in welk jaar beginnen de middeleeuwen?',y:500,e:'De middeleeuwen beginnen in <b>500</b>.'},
+ {t:'tf',p:'Tijdens WO I vluchtten honderdduizenden Belgen naar Nederland.',v:true,e:'Juist! Toen waren Belgen zelf vluchtelingen.'},
+ {t:'ord',p:'Zet in de juiste volgorde.',items:['Duitsland eist een doortocht door België (2 augustus 1914)','Koning Albert I weigert','Duitsland valt België binnen (4 augustus 1914)','De Belgen trekken terug tot achter de IJzer','Vier jaar loopgravenoorlog'],e:'Eerst de eis, dan de weigering, de inval, de terugtrekking achter de IJzer en de loopgravenoorlog.'}
+];
+const T3=[
+ {t:'year',p:'In welk jaar begon de Tweede Wereldoorlog?',y:1939,e:'WO II begon in <b>1939</b>.'},
+ {t:'year',p:'In welk jaar begon WO II in <b>België</b>?',y:1940,e:'Duitsland viel België binnen op 10 mei <b>1940</b>.'},
+ {t:'year',p:'In welk jaar eindigde de Tweede Wereldoorlog?',y:1945,e:'WO II eindigde in <b>1945</b>.'},
+ {t:'year',p:'In welk jaar kwam Hitler aan de macht?',y:1933,e:'Hitler kwam in <b>1933</b> aan de macht.'},
+ {t:'ord',p:'Zet de gebeurtenissen in chronologische volgorde.',items:['Duitsland verliest WO I en zit in een grote crisis','Hitler komt aan de macht en maakt van Duitsland een dictatuur','Duitsland valt Polen binnen: start WO II (1939)','Duitsland valt België binnen (10 mei 1940)','België geeft zich over (mei 1940)','Anne Frank duikt onder in het Achterhuis (1942)','België wordt bevrijd (1944)','Einde van WO II (1945)'],e:'1918 → 1933 → 1939 → 1940 → 1940 → 1942 → 1944 → 1945'},
+ {t:'mc',p:'Wat is een <b>dictator</b>?',c:['een alleenheerser','een soldaat','een koning zonder macht','een rechter'],a:0,e:'Een dictator is een <b>alleenheerser</b>: hij beslist alles alleen.'},
+ {t:'txt',p:'Aan het hoofd van welke partij stond Hitler?',acc:['nazipartij','nazi partij','nsdap','de nazis','nazis'],show:'de nazipartij',e:'Hitler leidde de <b>nazipartij</b>.'},
+ {t:'mc',p:'Waarom volgden veel mensen Hitler?',c:['Omdat hij grappig was','Omdat hij oplossingen beloofde voor de crisis in Duitsland','Omdat hij de oorlog had gewonnen','Omdat hij de koning was'],a:1,e:'Duitsland zat in een <b>crisis</b> en Hitler beloofde oplossingen.'},
+ {t:'mc',p:'Wat was het symbool van Hitler en de nazi\'s?',c:['de davidster','het hakenkruis','de duif','de leeuw'],a:1,e:'Het <b>hakenkruis</b>. (De davidster is een symbool van het jodendom.)'},
+ {t:'mc',p:'Waartoe riep Hitler op?',c:['vrede en vriendschap','rassenhaat en discriminatie van mensen die "anders" waren','meer vakantie','gelijke rechten voor iedereen'],a:1,e:'Hij riep op tot <b>rassenhaat en discriminatie</b>.'},
+ {t:'mc',p:'Wat was de Jodenster?',c:['een medaille voor dappere soldaten','een kenteken dat Joden moesten dragen','een sterrenbeeld','een speelgoedster'],a:1,e:'Een <b>kenteken</b> dat Joden tijdens WO II moesten dragen.'},
+ {t:'mc',p:'Waarom moesten Joden de ster dragen?',c:['Om te tonen dat ze niet gewenst waren en hen uit te sluiten','Omdat het mooi was','Om een prijs te winnen','Omdat ze soldaat waren'],a:0,e:'Hitler en zijn volgelingen wilden tonen dat Joden <b>niet gewenst</b> waren.'},
+ {t:'txt',p:'Op welk oud symbool van het jodendom was de Jodenster gebaseerd?',acc:['davidster','david ster','ster van david'],show:'de davidster',e:'Op de <b>davidster</b>.'},
+ {t:'tf',p:'Joden moesten hun fiets afgeven.',v:true,e:'Waar. Dat was een van de Jodenwetten.'},
+ {t:'tf',p:'Joden mochten gewoon met de tram rijden.',v:false,e:'Niet waar: Joden mochten <b>niet</b> in de tram.'},
+ {t:'tf',p:'Joden mochten alleen van 15 tot 17 uur boodschappen doen.',v:true,e:'Waar.'},
+ {t:'tf',p:'Joden mochten naar het zwembad en de bioscoop.',v:false,e:'Niet waar: zwembaden, bioscopen en sportplaatsen waren verboden voor Joden.'},
+ {t:'tf',p:'Joden mochten van 20 uur \'s avonds tot 6 uur \'s morgens niet op straat.',v:true,e:'Waar.'},
+ {t:'tf',p:'Joodse kinderen moesten naar Joodse scholen.',v:true,e:'Waar.'},
+ {t:'txt',p:'Anne Frank — Geloof:',acc:['joods','jodendom','joodse geloof','jood','joods jodendom'],show:'joods (jodendom)',e:'Anne Frank was <b>joods</b>.'},
+ {t:'txt',p:'Anne Frank — Ging onderduiken in:',acc:['achterhuis','het achterhuis'],show:'het Achterhuis',e:'Ze dook onder in <b>het Achterhuis</b>.'},
+ {t:'txt',p:'Anne Frank — Beschreef haar oorlogservaringen in:',acc:['dagboek','een dagboek','haar dagboek'],show:'een dagboek',e:'In haar <b>dagboek</b>.'},
+ {t:'txt',p:'Anne Frank — Bracht het einde van haar leven door in:',acc:['concentratiekamp','een concentratiekamp','kamp'],show:'een concentratiekamp',e:'In een <b>concentratiekamp</b>.'},
+ {t:'mc',p:'Wat betekent <b>onderduiken</b>?',c:['zwemmen onder water','je verstoppen zodat niemand je kan vinden','vluchten naar een ander land','in een kelder slapen voor je plezier'],a:1,e:'Onderduiken = je <b>verstoppen</b>.'},
+ {t:'mc',p:'Hoe kwam je in het Achterhuis binnen?',c:['via een draaiende boekenkast','via het dak','via een tunnel','via de voordeur'],a:0,e:'De geheime ingang zat achter een draaiende <b>boekenkast</b>.'},
+ {t:'mc',p:'In welke stad woonde Anne Frank?',c:['Brussel','Berlijn','Amsterdam','Parijs'],a:2,e:'In <b>Amsterdam</b>, in Nederland.'},
+ {t:'open',p:'💬 Denkvraag: stel je voor dat je moet onderduiken. Wat neem je zeker mee? Hoe kom je de dagen door? Hoe zou je je voelen?',ex:'Bijvoorbeeld: ik neem een dagboek en boeken mee, en een foto van mijn familie. Ik zou lezen, schrijven en leren om de tijd door te komen. Ik zou me bang en verveeld voelen, en ik zou mijn vrienden missen. Ik zou heel stil moeten zijn.'},
+ {t:'open',p:'💬 Denkvraag: "Wie te veel macht krijgt, …" Hoe zou jij die zin afmaken?',ex:'… kan die macht misbruiken. Daarom is het goed dat in een democratie niet één persoon alles beslist.'},
+ {t:'open',p:'💬 Denkvraag: vluchten voor de oorlog toen (Anne Frank) en nu. Wat is hetzelfde? Wat is anders?',ex:'Hetzelfde: mensen moeten weg omdat ze niet veilig zijn en ze zijn bang. Anders: nu vluchten mensen uit andere landen, vaak over grote afstanden met bootjes of vrachtwagens.'}
+];
+const T4=[
+ {t:'mc',p:'Wat is een <b>vooroordeel</b>?',c:['een mening die gebaseerd is op bewijzen','een mening die gebaseerd is op een mening en niet op bewijzen','een wet','een compliment'],a:1,e:'Een vooroordeel is gebaseerd op een <b>mening</b>, niet op <b>bewijzen</b>.'},
+ {t:'mc',p:'Wat is <b>discriminatie</b>?',c:['iedereen gelijk behandelen','anderen ongelijk behandelen op basis van ras, huidskleur, geloof, geslacht, rijkdom …','iemand helpen','een andere taal spreken'],a:1,e:'Discriminatie = anderen <b>ongelijk behandelen</b>.'},
+ {t:'mc',p:'Wat is <b>racisme</b>?',c:['discriminatie op basis van afkomst, ras, huidskleur of nationaliteit','discriminatie omdat iemand een meisje is','een sport','een mening over het weer'],a:0,e:'Racisme is een <b>specifieke vorm van discriminatie</b>: op basis van afkomst, ras, huidskleur of nationaliteit.'},
+ {t:'mc',p:'Waartoe kunnen vooroordelen leiden?',c:['tot vriendschap','tot discriminatie','tot een Nobelprijs','tot niets'],a:1,e:'Vooroordelen kunnen leiden tot <b>discriminatie</b>.'},
+ {t:'sort',p:'Is het een vooroordeel, discriminatie of racisme? Kies het meest precieze woord.',cats:['vooroordeel','discriminatie','racisme'],items:[['"Alle mensen uit dat land zijn lui."',0],['Lisa mag niet meevoetballen omdat ze een meisje is.',1],['Een café laat iemand niet binnen omwille van zijn huidskleur.',2],['Een kind wordt uitgesloten omdat zijn ouders weinig geld hebben.',1],['"Meisjes kunnen niet goed rekenen."',0],['Iemand krijgt de job niet omdat hij uit een ander land komt.',2]],e:'Een <b>mening</b> zonder bewijs = vooroordeel. Ongelijk <b>behandelen</b> = discriminatie. Ongelijk behandelen om <b>huidskleur, afkomst, ras of nationaliteit</b> = racisme.'},
+ {t:'mc',p:'Wat is een <b>karikatuur</b>?',c:['een tekening waarin kenmerken overdreven worden getekend','een foto','een stripheld','een krantenartikel'],a:0,e:'Bij een karikatuur worden bepaalde kenmerken <b>overdreven</b> getekend.'},
+ {t:'mc',p:'Waarom kreeg de tekening in Suske en Wiske kritiek?',c:['De kleuren waren te fel','De lippen van een zwarte man waren ouderwets en overdreven dik getekend','Het album was te duur','Er stond een fout in de tekst'],a:1,e:'De tekening deed denken aan <b>racistische prenten uit het koloniale verleden</b>.'},
+ {t:'sort',p:'Bij wie hoort elk kenmerk?',cats:['Martin Luther King','Rosa Parks','Nelson Mandela'],items:[['"I have a dream"',0],['vrijheid voor zwarten in Amerika',0],['recht op een zitplaats in de bus',1],['actie leidt tot de Montgomery-busboycot',1],['"Ik was niet moe; ik was het moe om altijd te moeten toegeven!"',1],['27 jaar gevangen op Robbeneiland',2],['afschaffing van de apartheid',2],['eerste zwarte president in Zuid-Afrika',2]],e:'King: I have a dream, vrijheid in Amerika. Parks: bus en busboycot. Mandela: Robbeneiland, apartheid, president van Zuid-Afrika.'},
+ {t:'mc',p:'Wie kreeg de <b>Nobelprijs voor de Vrede</b>?',c:['alleen Rosa Parks','Martin Luther King én Nelson Mandela','alleen Nelson Mandela','niemand van hen'],a:1,e:'Zowel <b>Martin Luther King</b> als <b>Nelson Mandela</b>.'},
+ {t:'mc',p:'Wat was de <b>apartheid</b>?',c:['een feest in Zuid-Afrika','wetten in Zuid-Afrika die zwarte en blanke mensen van elkaar scheidden','een gevangenis','een soort bus'],a:1,e:'Apartheid = <b>scheiding</b> van zwarte en blanke mensen bij wet.'},
+ {t:'mc',p:'Wat gebeurde er met Martin Luther King op 4 april 1968?',c:['Hij werd president','Hij werd doodgeschoten','Hij kreeg de Nobelprijs','Hij vluchtte naar Europa'],a:1,e:'Hij werd <b>doodgeschoten</b>. Dat veroorzaakte veel onrust in de VS.'},
+ {t:'year',p:'In welk jaar kwam er in de VS dankzij de Civil Rights Act een einde aan de rassenscheiding?',y:1964,e:'In <b>1964</b>. President Johnson gebruikte 74 pennen om de wet te ondertekenen en deelde ze uit.'},
+ {t:'mc',p:'Waar ligt Zuid-Afrika?',c:['in Zuid-Amerika','helemaal in het zuiden van Afrika','in het zuiden van Europa','in Azië'],a:1,e:'Zuid-Afrika ligt helemaal in het <b>zuiden van Afrika</b>.'},
+ {t:'txt',p:'Hoe heet het eiland waar Nelson Mandela gevangen zat?',acc:['robbeneiland','robben eiland'],show:'Robbeneiland',e:'<b>Robbeneiland</b>.'},
+ {t:'open',p:'💬 Denkvraag: helaas worden ook vandaag nog groepen mensen uitgesloten. Ken jij een voorbeeld (uit het nieuws, op school, op sociale media)? Wat kan jij doen?',ex:'Bijvoorbeeld: iemand wordt online uitgescholden om zijn huidskleur of geloof. Ik kan het melden, het slachtoffer steunen en zelf niet meedoen of meelachen.'}
+];
+const THEMES={t1:[['Vluchtelingen & asiel',T1.slice(0,8),4],['Trekvogels',T1.slice(8,16),4],['💬 Denkvraag',T1.slice(16),1]],
+ t2:[['Jaartallen & tijdband',T2.filter(q=>q.t==='year'||/tijdband|eeuw/.test(q.p)),4],['Conflicten & bondgenoten',T2.filter(q=>/kolonies|1870|vloot|Bosni|bondgenoten|machtsblok/.test(q.p)),4],['Het Von Schlieffenplan',T2.filter(q=>/doortocht|Rusland|plan|neutraal|koning|binnen|rivier|gevolg|vluchtten/.test(q.p)),4],['Zet in volgorde',T2.filter(q=>q.t==='ord'),1]],
+ t3:[['Jaartallen',T3.filter(q=>q.t==='year'),3],['Tijdlijn: zet in volgorde',T3.filter(q=>q.t==='ord'),1],['Adolf Hitler',T3.filter(q=>/dictator|partij|Hitler|symbool|riep/.test(q.p)&&!/jodendom/.test(q.p)&&q.t!=='year'),3],['De Jodenster & Jodenwetten',T3.filter(q=>/Jodenster|ster|Joden|Joodse/.test(q.p)&&q.t!=='open'),4],['Anne Frank',T3.filter(q=>/Anne Frank|onderduiken|Achterhuis/.test(q.p)&&q.t!=='open'),4],['💬 Denkvragen',T3.filter(q=>q.t==='open'),3]],
+ t4:[['Vooroordeel, discriminatie, racisme',T4.slice(0,5),4],['Racisme of niet? De karikatuur',T4.slice(5,7),2],['Strijders voor gelijkwaardigheid',T4.slice(7,14),4],['💬 Denkvraag',T4.slice(14),1]]};
+const ALL=[...T1,...T2,...T3,...T4].filter(q=>q.t!=='open');
+
+/* ===== rendering ===== */
+let QID=0;const QS={};
+function cardHTML(src){
+  const q=JSON.parse(JSON.stringify(src));const id='q'+(++QID);q.id=id;q.tries=0;q.done=false;QS[id]=q;
+  const wide=(q.t==='sort'||q.t==='ord')?' wide':'';
+  let tag={mc:'',txt:'✏️ typ',year:'📅 jaartal',tf:'✔️ waar of niet waar',sort:'🗂️ sorteren',ord:'🔢 volgorde',open:'💬 denkvraag'}[q.t];
+  let h=`<div class="q${wide}" id="${id}">${tag?`<span class="tag">${tag}</span>`:''}<div class="prompt">${q.p}</div>`;
+  if(q.t==='mc'){q.order=shuffle(q.c.map((_,i)=>i));h+=`<div class="choices">${q.order.map(i=>`<button class="ch" data-q="${id}" data-i="${i}">${q.c[i]}</button>`).join('')}</div>`;}
+  else if(q.t==='tf'){h+=`<div class="choices"><button class="ch" data-q="${id}" data-i="1">✔️ Waar</button><button class="ch" data-q="${id}" data-i="0">✖️ Niet waar</button></div>`;}
+  else if(q.t==='txt'||q.t==='year'){h+=(q.bank?`<div class="bank">${q.bank}</div>`:'')+`<input class="txt${q.t==='year'?' year':''}" data-q="${id}" ${q.t==='year'?'inputmode="numeric"':''} autocomplete="off" spellcheck="false" placeholder="${q.t==='year'?'jaartal':'typ je antwoord'}"><br><button class="check" data-q="${id}">Controleer</button>`;}
+  else if(q.t==='sort'){q.view=shuffle(q.items.map((_,i)=>i));h+=`<div class="rows">${q.view.map(i=>`<div class="row"><span>${q.items[i][0]}</span><select data-i="${i}"><option value="">kies…</option>${q.cats.map((c,k)=>`<option value="${k}">${c}</option>`).join('')}</select></div>`).join('')}</div><button class="check" data-q="${id}">Controleer</button>`;}
+  else if(q.t==='ord'){q.view=shuffle(q.items.map((_,i)=>i));q.pos={};h+=`<div class="bank">Klik de gebeurtenissen aan in de juiste volgorde: eerst wat het eerst gebeurde.</div><div class="ord">${q.view.map(i=>`<button class="ordb" data-q="${id}" data-i="${i}"><span class="nr"></span><span>${q.items[i]}</span></button>`).join('')}</div><button class="check" data-q="${id}">Controleer</button><button class="reset" data-q="${id}">↺ Opnieuw</button>`;}
+  else if(q.t==='open'){h+=`<textarea placeholder="Schrijf hier wat jij denkt…"></textarea><button class="check" data-q="${id}">Toon een voorbeeld</button>`;}
+  return h+`<div class="fb"></div></div>`;
+}
+function renderSet(th,i){const [title,pool,n]=THEMES[th][i];document.getElementById(`set-${th}-${i}`).innerHTML=`<div class="set-h"><h3>🎯 ${title}</h3>${pool.length>n?`<button class="again" data-t="${th}" data-i="${i}">🔄 Nieuwe vragen</button>`:''}</div><div class="qgrid">${shuffle(pool).slice(0,n).map(cardHTML).join('')}</div>`;}
+function renderTheme(th){const box=document.getElementById('sets-'+th);box.innerHTML='<h2 style="margin-top:28px">✏️ Oefenen</h2>'+THEMES[th].map((_,i)=>`<div class="set" id="set-${th}-${i}"></div>`).join('');THEMES[th].forEach((_,i)=>renderSet(th,i));}
+
+/* ===== stars ===== */
+const NAME='Alexis';
+const store={get(k,d){try{const v=localStorage.getItem('wo-'+NAME+'-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('wo-'+NAME+'-'+k,JSON.stringify(v));}catch(e){}}};
+let stars=store.get('stars',0),best=store.get('best',null);
+function renderStars(){document.getElementById('stars').innerHTML=`<span>⭐ ${stars} sterren</span>${best!=null?`<span>🏆 beste test: ${best}/12</span>`:''}`;document.getElementById('best').textContent=best!=null?`Jouw beste testscore: ${best}/12`:'';}
+function addStar(){stars++;store.set('stars',stars);renderStars();bveSend({type:'bve-ster'});}
+/* ===== Bende van ellende: koppeling met de app ===== */
+const LES_NAAM={t1:'Vluchten & trekken',t2:'Eerste Wereldoorlog',t3:'Tweede Wereldoorlog',t4:'Racisme & gelijkwaardigheid',test:'Grote test'};
+function bveSend(msg){try{if(window.parent!==window)window.parent.postMessage(Object.assign({speler:NAME,oefening:'wo'},msg),location.origin==='null'?'*':location.origin);}catch(e){}}
+
+/* ===== checking ===== */
+const PRAISE=['Super! ⭐','Knap gedaan! 🎉','Juist! 💪','Top! 🌟','Helemaal goed! ✅','Yes! 🙌'];
+function fb(card,cls,html){const f=card.querySelector('.fb');f.className='fb '+cls;f.innerHTML=html;}
+function solved(q,card,extra){q.done=true;card.classList.add('solved');addStar();
+  {const th=((card.closest('section.view')||{}).id||'').replace('v-','');bveSend({type:'bve-oef',les:LES_NAAM[th]||th,set:'',tries:q.tries||1});}fb(card,'good',`<b>${pick(PRAISE)}</b> ${extra||''}<details${q.tries>1?' open':''}><summary>Uitleg</summary>${q.e}</details>`);}
+const HINTS={mc:'Lees de uitleg bovenaan nog eens.',tf:'Denk nog eens goed na.',txt:'Kijk in de uitleg bovenaan.',year:'Kijk naar de jaartallen in de uitleg.',sort:'De rode vakjes zijn nog fout. De groene zijn al juist!',ord:'Wat gebeurde er eerst? Klik op ↺ Opnieuw en probeer nog eens.'};
+function wrong(q,card){if(q.tries===1)fb(card,'bad',`Nog niet helemaal. <b>Tip:</b> ${HINTS[q.t]} Probeer nog eens!`);else fb(card,'bad',`<b>Het juiste antwoord:</b><br>${answerOf(q)}<br>${q.e}`);}
+function answerOf(q){if(q.t==='mc')return q.c[q.a];if(q.t==='tf')return q.v?'Waar':'Niet waar';if(q.t==='txt')return q.show;if(q.t==='year')return q.y;if(q.t==='sort')return q.items.map(([t,c])=>`${t} → <b>${q.cats[c]}</b>`).join('<br>');if(q.t==='ord')return q.items.map((t,i)=>`${i+1}. ${t}`).join('<br>');return '';}
+function check(id){
+  const q=QS[id];if(!q||q.done)return;const card=document.getElementById(id);
+  if(q.t==='open'){q.done=true;card.classList.add('solved');fb(card,'info',`<b>Voorbeeld:</b> ${q.ex}<br><i>Er is geen fout antwoord. Bespreek het gerust thuis!</i>`);return;}
+  if(q.t==='txt'||q.t==='year'){const inp=card.querySelector('input');if(!inp.value.trim()){fb(card,'warn','Vul eerst iets in 🙂');return;}q.tries++;
+    if(q.t==='year'){const ok=inp.value.replace(/\D/g,'')===String(q.y);inp.classList.toggle('good',ok);inp.classList.toggle('bad',!ok);ok?solved(q,card):wrong(q,card);return;}
+    const m=matchText(inp.value,q.acc);inp.classList.toggle('good',m>0);inp.classList.toggle('bad',m===0);
+    if(m>0)solved(q,card,m===1?`Let op de schrijfwijze: <b>${q.show}</b>`:'');else wrong(q,card);return;}
+  if(q.t==='sort'){const sels=[...card.querySelectorAll('select')];if(sels.some(s=>s.value==='')){fb(card,'warn','Kies eerst overal iets 🙂');return;}q.tries++;let all=true;
+    sels.forEach(s=>{const ok=+s.value===q.items[+s.dataset.i][1];s.classList.toggle('good',ok);s.classList.toggle('bad',!ok);if(!ok)all=false;});all?solved(q,card):wrong(q,card);return;}
+  if(q.t==='ord'){if(Object.keys(q.pos).length<q.items.length){fb(card,'warn','Klik eerst alle gebeurtenissen aan 🙂');return;}q.tries++;
+    const ok=q.items.every((_,i)=>q.pos[i]===i+1);ok?solved(q,card):wrong(q,card);if(!ok&&q.tries<2){/*keep*/}return;}
+}
+function choose(id,i,btn){const q=QS[id];if(!q||q.done)return;const card=document.getElementById(id);q.tries++;
+  const ok=q.t==='tf'?(i===1)===q.v:i===q.a;btn.classList.add(ok?'good':'bad');ok?solved(q,card):wrong(q,card);}
+function ordClick(id,i,btn){const q=QS[id];if(!q||q.done||q.pos[i])return;const n=Object.keys(q.pos).length+1;q.pos[i]=n;btn.classList.add('set');btn.querySelector('.nr').textContent=n;}
+function ordReset(id){const q=QS[id];if(!q||q.done)return;q.pos={};document.querySelectorAll(`#${id} .ordb`).forEach(b=>{b.classList.remove('set');b.querySelector('.nr').textContent='';});}
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.classList.contains('check'))check(t.dataset.q);
+  else if(t.classList.contains('ch'))choose(t.dataset.q,+t.dataset.i,t);
+  else if(t.classList.contains('ordb'))ordClick(t.dataset.q,+t.dataset.i,t);
+  else if(t.classList.contains('reset'))ordReset(t.dataset.q);
+  else if(t.classList.contains('again'))renderSet(t.dataset.t,+t.dataset.i);
+  else if(t.dataset.v)show(t.dataset.v);else if(t.dataset.go)show(t.dataset.go);});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input.txt')){e.preventDefault();check(e.target.dataset.q);}});
+
+/* ===== test ===== */
+function newTest(){document.getElementById('testgrid').innerHTML=shuffle(ALL).slice(0,12).map(cardHTML).join('');document.getElementById('result').textContent='';}
+document.getElementById('newtest').onclick=newTest;
+document.getElementById('scoretest').onclick=()=>{const qs=[...document.querySelectorAll('#testgrid .q')].map(c=>QS[c.id]);const first=qs.filter(q=>q.done&&q.tries===1).length,open=qs.filter(q=>!q.done).length;
+  let msg=`${first} van de 12 in één keer juist! `+(first>=11?'🏆 Kampioen!':first>=9?'🌟 Heel goed!':first>=6?'💪 Goed bezig, nog wat oefenen.':'📖 Lees de uitleg nog eens en probeer opnieuw.');if(open)msg+=` (${open} nog niet beantwoord)`;
+  document.getElementById('result').textContent=msg;if(best==null||first>best){best=first;store.set('best',best);renderStars();}
+  bveSend({type:'bve-test',score:first,open:open,max:12});};
+
+/* ===== views ===== */
+const VIEWS=['start','t1','t2','t3','t4','test','spiek'];
+function show(v){if(!VIEWS.includes(v))v='start';document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(location.hash!=='#'+v){try{history.replaceState(null,'','#'+v);}catch(e){}}window.scrollTo(0,0);}
+window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+renderStars();['t1','t2','t3','t4'].forEach(renderTheme);newTest();show(location.hash.slice(1)||'start');
+/* Bende van ellende: sterren en beste score gelijk houden op alle toestellen */
+if(window.parent!==window){
+  window.addEventListener('message',e=>{
+    if(e.origin!==location.origin&&location.origin!=='null')return;
+    const d=e.data;if(!d||d.type!=='bve-state')return;
+    const ns=Math.max(stars,d.known?d.stars:0), b=[best,d.known?d.best:null].filter(x=>x!=null), nb=b.length?Math.max(...b):null;
+    if(!d.known||ns!==d.stars||nb!==(d.known?d.best:null)) bveSend({type:'bve-seed',stars:ns,best:nb});
+    if(ns!==stars||nb!==best){stars=ns;best=nb;store.set('stars',stars);store.set('best',best);renderStars();}
+  });
+  bveSend({type:'bve-hello'});
+}
+</script>
+</body>
+</html>

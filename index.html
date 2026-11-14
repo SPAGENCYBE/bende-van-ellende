@@ -366,6 +366,10 @@ body.chatfull nav.tabs{display:none}
 .prog-h .s{color:var(--muted);font-weight:700;margin-left:auto}
 .prog-stats{display:flex;gap:6px;flex-wrap:wrap}
 .prog-les{display:grid;gap:4px}
+.prog-oef{display:grid;gap:8px;padding:10px 12px;border:2px solid var(--hair);border-radius:14px;background:var(--paper-2)}
+.prog-oef-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.prog-oef-h b{font-weight:900}
+.prog-oef-h .s{margin-left:auto;color:var(--muted);font-weight:700}
 .mvbtns{display:flex;gap:4px}
 .smeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .smeta:empty{display:none}
@@ -1143,11 +1147,13 @@ function pinRow(){
 // ---------- school ----------
 const OEFENINGEN = [
   {id:"breuken-amylia", title:"Breuken & procenten", voor:"Amylia", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-amylia.html", vak:"Wiskunde"},
+  {id:"wo-amylia", title:"Wereldoriëntatie", voor:"Amylia", sub:"Vluchten & trekken, Eerste en Tweede Wereldoorlog, racisme & gelijkwaardigheid. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🌍", file:"oefeningen/wo-amylia.html", vak:"Wereldoriëntatie"},
+  {id:"wo-alexis", title:"Wereldoriëntatie", voor:"Alexis", sub:"Vluchten & trekken, Eerste en Tweede Wereldoorlog, racisme & gelijkwaardigheid. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🌍", file:"oefeningen/wo-alexis.html", vak:"Wereldoriëntatie"},
   {id:"breuken-alexis", title:"Breuken & procenten", voor:"Alexis", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-alexis.html", vak:"Wiskunde"}
 ];
 const oefMember = o => S.members.find(m => normName(m.name) === normName(o.voor));
 // Welke oefeningen zie je? Een kind alleen de zijne; een ouder of "Iedereen" alles (of die van het gekozen kind).
-const oefVisible = () => OEFENINGEN.filter(o => !o.voor || (who === "all" && !kidView()) || normName(M(who)?.name) === normName(o.voor) || (!kidView() && M(who)?.role !== "kind"));
+const oefVisible = () => OEFENINGEN.filter(o => !o.voor || (who === "all" && !kidView()) || normName(M(who)?.name) === normName(o.voor) || (!kidView() && M(who)?.role !== "kind")).sort((a, b) => { const ma = oefMember(a), mb = oefMember(b); return (ma ? memberRank(ma) : 999) - (mb ? memberRank(mb) : 999) || a.title.localeCompare(b.title, "nl"); });
 // Oefening bij een schooltaak (ook oude taken die nog naar "breuken" verwijzen).
 const oefFor = x => OEFENINGEN.find(o => o.id === x.oef) || (x.oef && x.oef.startsWith("breuken") ? OEFENINGEN.find(o => o.id.startsWith("breuken") && normName(o.voor) === normName(M(x.who)?.name)) : null);
 const SCHOOL_KINDS = ["Huiswerk","Toets","Opdracht","Oefenen","Meebrengen"];
@@ -1246,7 +1252,7 @@ function logOefen(d){
   const m = S.members.find(x => normName(x.name) === normName(d.speler)); if (!m) return;
   const o = OEFENINGEN.find(x => x.id.startsWith(d.oefening || "") && normName(x.voor) === normName(m.name)) || OEFENINGEN.find(x => x.id === d.oefening);
   const row = {who:m.id, oef:o ? o.id : (d.oefening || ""), at:Date.now()};
-  if (d.type === "bve-test") Object.assign(row, {kind:"test", les:"Grote test", score:+d.score || 0, open:+d.open || 0});
+  if (d.type === "bve-test") Object.assign(row, {kind:"test", les:"Grote test", score:+d.score || 0, open:+d.open || 0, max:+d.max || 10});
   else Object.assign(row, {kind:"q", les:String(d.les || "").slice(0, 60), set:String(d.set || "").slice(0, 80), tries:+d.tries || 1});
   add("oefenlog", row);
 }
@@ -1255,17 +1261,24 @@ function whenTxt(ms){
   return day === today() ? `vandaag ${hm}` : day === addDays(today(), -1) ? `gisteren ${hm}` : `${fmtDay(day)} ${hm}`;
 }
 function progressFor(m){
-  const L = S.oefenlog.filter(x => x.who === m.id), q = L.filter(x => x.kind === "q"), tests = L.filter(x => x.kind === "test").sort((a, b) => b.at - a.at);
+  const L = S.oefenlog.filter(x => x.who === m.id), q = L.filter(x => x.kind === "q");
   if (!L.length) return `<div class="prog"><div class="prog-h">${avatar(m)}<b>${esc(m.name)}</b><span class="s">Nog niet geoefend</span></div></div>`;
   const last = Math.max(...L.map(x => x.at)), t0 = parse(today()).getTime(), w0 = t0 - 6 * 864e5;
   const pct = list => list.length ? Math.round(list.filter(x => +x.tries === 1).length / list.length * 100) : 0;
-  const lessen = {}; q.forEach(x => { (lessen[x.les || "Andere"] ||= []).push(x); });
-  const best = tests.length ? Math.max(...tests.map(x => x.score)) : null;
+  // per oefening (vak) apart: lessen en grote test
+  const perOef = {}; L.forEach(x => { (perOef[x.oef || "?"] ||= []).push(x); });
+  const blocks = Object.entries(perOef).sort((a, b) => Math.max(...b[1].map(x => x.at)) - Math.max(...a[1].map(x => x.at))).map(([oid, list]) => {
+    const o = OEFENINGEN.find(x => x.id === oid), oq = list.filter(x => x.kind === "q"), tests = list.filter(x => x.kind === "test").sort((a, b) => b.at - a.at);
+    const lessen = {}; oq.forEach(x => { (lessen[x.les || "Andere"] ||= []).push(x); });
+    const max = t => +t.max || (String(oid).startsWith("wo") ? 12 : 10), best = tests.length ? Math.max(...tests.map(x => x.score)) : null;
+    return `<div class="prog-oef"><div class="prog-oef-h">${o ? o.emoji : "✏️"} <b>${esc(o ? o.title : "Oefening")}</b><span class="s">${oq.length} juist · ${pct(oq)} % in één keer</span></div>
+      ${Object.entries(lessen).sort((a, b) => a[0].localeCompare(b[0], "nl")).map(([les, ll]) => { const p = pct(ll); return `<div class="prog-les"><div class="kv"><span>${esc(les)}</span><span class="num">${ll.length} juist · ${p} % in één keer</span></div><div class="bar" style="height:8px"><i style="width:${p}%"></i></div>
+        ${ll.some(x => x.set) ? `<div class="s" style="color:var(--muted)">${[...new Set(ll.map(x => x.set).filter(Boolean))].map(esc).join(" · ")}</div>` : ""}</div>`; }).join("")}
+      ${tests.length ? `<div class="kv"><span>🏆 Grote test</span><span class="num">laatste ${tests[0].score}/${max(tests[0])} (${whenTxt(tests[0].at)}) · beste ${best}/${max(tests[0])}</span></div>` : ""}</div>`;
+  }).join("");
   return `<div class="prog"><div class="prog-h">${avatar(m)}<b>${esc(m.name)}</b><span class="s">Laatst geoefend: ${whenTxt(last)}</span></div>
     <div class="prog-stats"><span class="pill pts num">★ ${q.filter(x => x.at >= t0).length} vandaag</span><span class="pill pts num">★ ${q.filter(x => x.at >= w0).length} deze week</span><span class="pill ${pct(q) >= 70 ? "ok" : pct(q) >= 40 ? "warn" : "bad"} num">${pct(q)} % in één keer juist</span></div>
-    ${Object.entries(lessen).sort((a, b) => a[0].localeCompare(b[0], "nl")).map(([les, list]) => { const p = pct(list); return `<div class="prog-les"><div class="kv"><span>${esc(les)}</span><span class="num">${list.length} juist · ${p} % in één keer</span></div><div class="bar" style="height:8px"><i style="width:${p}%"></i></div>
-      <div class="s" style="color:var(--muted)">${[...new Set(list.map(x => x.set).filter(Boolean))].map(esc).join(" · ")}</div></div>`; }).join("")}
-    ${tests.length ? `<div class="kv" style="margin-top:8px"><span>🏆 Grote test</span><span class="num">laatste ${tests[0].score}/10 (${whenTxt(tests[0].at)}) · beste ${best}/10</span></div>` : ""}
+    ${blocks}
   </div>`;
 }
 function progressCard(){
