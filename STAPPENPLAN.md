@@ -95,6 +95,7 @@ Begin op één tablet bij **De bende** en voeg de echte gezinsleden toe. Op de a
 ## Handig om te weten
 
 - **Babbels:** de gezinschat. Tik op een bericht om met een emoji te reageren of het op het prikbord te zetten. Vastgezette berichten staan ook op het overzicht en in de muurstand. Een rood bolletje bij Babbels toont hoeveel nieuwe berichten er zijn.
+- **School:** schooltaken (huiswerk, toets, opdracht, oefenen, meebrengen) per kind met een datum, plus oefeningen zoals *Breuken & procenten*. Elke juiste oefening geeft een oefensterretje aan het kind met dezelfde naam. Nieuwe oefeningen zet je als HTML-bestand in de map `oefeningen/` en voeg je toe aan de lijst `OEFENINGEN` in `index.html`.
 - **Muurstand:** knop bovenaan. Grote klok, de dag van vandaag, taken en het avondeten. Het scherm blijft aan zolang de muurstand open staat.
 - **Vegen:** veeg op een tablet of gsm naar links of rechts om tussen de onderdelen te wisselen.
 - **Zonder wifi:** de app start op en je ziet de laatste gegevens. Wat je afvinkt, wordt verstuurd zodra er weer verbinding is.

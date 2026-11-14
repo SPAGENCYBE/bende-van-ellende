@@ -11,8 +11,8 @@ try {
 } catch (e) { /* zonder internet bij de eerste start: meldingen later */ }
 
 // Na een update van de bestanden: verhoog het versienummer hieronder.
-const VERSIE = "bende-v6";
-const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest",
+const VERSIE = "bende-v7";
+const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest", "./oefeningen/breuken-procenten.html",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 // Klik op een melding: open de app (of breng hem naar voren).
