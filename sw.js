@@ -11,7 +11,7 @@ try {
 } catch (e) { /* zonder internet bij de eerste start: meldingen later */ }
 
 // Na een update van de bestanden: verhoog het versienummer hieronder.
-const VERSIE = "bende-v8";
+const VERSIE = "bende-v9";
 const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest", "./oefeningen/breuken-procenten.html",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 

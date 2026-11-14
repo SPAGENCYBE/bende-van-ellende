@@ -437,7 +437,7 @@ function sample(){
 async function init(){
   render();
   const cfg = CFG.firebase;
-  if (!cfg || !cfg.apiKey) { mode = "local"; loadDemo(); S.meta.google ||= {}; render(); maybePicker(); loadGoogle(); return; }
+  if (!cfg || !cfg.apiKey) { mode = "local"; loadDemo(); S.meta.google ||= {}; S.meta.settings ||= {}; render(); maybePicker(); loadGoogle(); return; }
   try {
     const base = "https://www.gstatic.com/firebasejs/10.12.2/";
     const [appM, authM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
@@ -457,7 +457,7 @@ function startSync(){
   const onErr = e => { if (e && e.code === "permission-denied") toast("Dit account heeft geen toegang. Controleer de UID in de Firestore-regels."); };
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
   COLS.filter(c => c !== "messages").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
-  ["menu","budget","google"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
+  ["menu","budget","google","settings"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
 }
 function showLogin(){
   const el = $("#login"); el.hidden = false;
@@ -890,6 +890,23 @@ function vAgenda(){
     `<div class="card">${eventRows(list)}</div><p class="s" style="color:var(--muted);margin-top:10px">${gUrl() ? `Afspraken met een G komen uit Google Agenda${G.fetchedAt ? `, bijgewerkt om ${new Date(G.fetchedAt).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"})}` : ""}. ` : ""}Verjaardagen komen automatisch uit De bende. Je ziet de komende 4 maanden.</p>`;
 }
 
+// ---------- kindvergrendeling ----------
+const parentPin = () => (S.meta.settings && S.meta.settings.pin) || "";
+const locked = target => kidView() && parentPin() && target !== who;
+function askPin(onOk, title){
+  showSheet(`<form id="pinForm"><h3><span>Ouderpincode</span></h3><p class="s" style="font-weight:700;margin:-6px 0 12px">${esc(title || "Alleen ouders kunnen van profiel wisselen.")}</p>
+    <div class="field"><label for="f_pin">Pincode</label><input type="password" id="f_pin" inputmode="numeric" autocomplete="off" maxlength="8" style="width:100%;border:var(--bw) solid var(--line);background:var(--paper);border-radius:12px;padding:9px 12px;font-weight:900;font-size:22px;letter-spacing:.3em"></div>
+    <p class="msg" id="pinMsg" style="color:var(--bad);font-weight:800;min-height:1.4em;margin:0"></p>
+    <div class="actions"><div class="r"><button type="button" class="btn ghost" data-close>Annuleren</button><button class="btn">OK</button></div></div></form>`);
+  const inp = $("#f_pin"); inp.focus();
+  $("#pinForm").addEventListener("submit", e => { e.preventDefault();
+    if (inp.value === parentPin()) { closeSheet(); onOk(); } else { $("#pinMsg").textContent = "Die code klopt niet."; inp.value = ""; inp.focus(); } });
+}
+function pinRow(){
+  if (kidView()) return parentPin() ? `<div class="row"><div class="grow"><div class="t">Kindvergrendeling</div><div class="s">Aan. Wisselen van profiel kan alleen met de ouderpincode.</div></div></div>` : "";
+  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Kindvergrendeling</div><div class="s">${parentPin() ? "Aan. Kiest een kind zichzelf, dan kan het alleen met de ouderpincode wisselen en ziet het bij School enkel zijn eigen taken." : "Uit. Stel een ouderpincode in, zodat kinderen niet naar een ander profiel kunnen wisselen."}</div></div><button class="btn ${parentPin() ? "ghost " : ""}sm" data-act="setpin">${parentPin() ? "Pincode wijzigen" : "Pincode instellen"}</button></div>`;
+}
+
 // ---------- school ----------
 const OEFENINGEN = [
   {id:"breuken", title:"Breuken & procenten", sub:"Les 11, 12 en 13: procenten, rationale getallen en gemengde getallen. Met uitleg, oefeningen, grote test en spiekbrief.", emoji:"🍕", file:"oefeningen/breuken-procenten.html", vak:"Wiskunde"}
@@ -907,24 +924,26 @@ function dueChip(x){
   return `<span class="pill n">${fmtDay(x.due)}</span>`;
 }
 function schoolRows(list){
-  if (!list.length) return empty("Geen schooltaken. Voeg huiswerk, een toets of iets om mee te brengen toe.");
+  if (!list.length) return empty(kidView() ? "Je hebt geen schooltaken. Goed bezig! 🎉" : "Geen schooltaken. Voeg huiswerk, een toets of iets om mee te brengen toe.");
   return `<div class="list">` + list.map(x => {
     const m = M(x.who), oef = OEFENINGEN.find(o => o.id === x.oef);
     return `<div class="row ${x.done ? "done" : ""}"><input type="checkbox" class="check" data-school="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.title)} afvinken">
-      <div class="grow"><div class="click" data-edit="school:${x.id}" style="cursor:pointer"><div class="t">${KIND_EMO[x.kind] || "📚"} ${esc(x.title)}</div><div class="s">${[x.kind, x.vak, x.note].filter(Boolean).map(esc).join(" · ")}</div></div>
+      <div class="grow"><div ${kidView() ? "" : `class="click" data-edit="school:${x.id}" style="cursor:pointer"`}><div class="t">${KIND_EMO[x.kind] || "📚"} ${esc(x.title)}</div><div class="s">${[x.kind, x.vak, x.note].filter(Boolean).map(esc).join(" · ")}</div></div>
       <div class="smeta">${dueChip(x)}${oef && !x.done ? `<button class="btn sm" data-oef="${oef.id}" data-for="${esc(x.who || "")}">✏️ Oefenen</button>` : ""}</div></div>${m ? avatar(m) : ""}</div>`;
   }).join("") + `</div>`;
 }
+const kidView = () => M(who)?.role === "kind";
+const schoolMine = x => kidView() ? x.who === who : mine("who")(x);
 function openSchool(){
   const t = today();
-  return S.school.filter(mine("who")).filter(x => !x.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+  return S.school.filter(schoolMine).filter(x => !x.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
 }
 function vSchool(){
   const t = today(), open = openSchool();
-  const done = S.school.filter(mine("who")).filter(x => x.done && (!x.doneAt || daysBetween(x.doneAt, t) <= 14)).sort((a, b) => (b.doneAt || "").localeCompare(a.doneAt || ""));
+  const done = S.school.filter(schoolMine).filter(x => x.done && (!x.doneAt || daysBetween(x.doneAt, t) <= 14)).sort((a, b) => (b.doneAt || "").localeCompare(a.doneAt || ""));
   const kids = S.members.filter(m => m.role === "kind");
   const stars = kids.filter(m => +m.oefenSterren);
-  return sec("School", `<button class="btn" data-new="school">Schooltaak toevoegen</button>`) +
+  return sec(kidView() ? `School van ${esc(M(who).name)}` : "School", kidView() ? "" : `<button class="btn" data-new="school">Schooltaak toevoegen</button>`) +
   `<div class="grid">
     <div class="card"><h3><span class="tag">Te doen</span><span class="pill n num">${open.length}</span></h3>${schoolRows(open)}
       ${done.length ? `<details class="donebox"><summary>Afgewerkt (${done.length})</summary>${schoolRows(done)}</details>` : ""}</div>
@@ -1014,6 +1033,7 @@ function vBende(){
       <div class="row"><div class="grow"><div class="t">Wie gebruikt deze tablet?</div><div class="s">${who === "all" ? "Iedereen (gezinsscherm)" : esc(M(who)?.name || "")}</div></div><button class="btn ghost sm" data-act="picker">Wisselen</button></div>
       <div class="row" style="flex-wrap:wrap"><div class="grow"><div class="t">Google Agenda</div><div class="s">${gUrl() ? (G.error ? esc(G.error) : G.calendars.length ? `Gekoppeld: ${G.calendars.length} agenda's. ${(() => { const un = G.calendars.filter(c => !calMember(c.name) && !isMenuCal(c.name)).map(c => c.name); return un.length ? `Voor iedereen: ${esc(un.join(", "))}.` : ""; })()}` : "Gekoppeld, even ophalen…") : "Niet gekoppeld. Toon jullie Google-afspraken in de app."}</div></div>${gUrl() ? `<button class="btn ghost sm" data-act="gsync">Vernieuwen</button><button class="btn ghost sm" data-act="glink">Wijzigen</button>` : `<button class="btn sm" data-act="glink">Koppelen</button>`}</div>
       ${pushRow()}
+      ${pinRow()}
       <div class="row"><div class="grow"><div class="t">Geluidjes</div><div class="s">Een vrolijk pling als je een taak afvinkt</div></div><button class="btn ghost sm" data-act="sound">${soundOn ? "Aan" : "Uit"}</button></div>
       <div class="row"><div class="grow"><div class="t">Op het beginscherm</div><div class="s">${standalone() ? "Deze app is geïnstalleerd." : isIOS ? "Tik in Safari op Delen en kies Zet op beginscherm." : deferredInstall ? "Installeer de app met één tik." : "Kies in het browsermenu ⋮ voor App installeren."}</div></div>${deferredInstall && !standalone() ? '<button class="btn sm" data-act="install">Installeren</button>' : ""}</div>
       ${mode === "db" ? '<div class="row"><div class="grow"><div class="t">Afmelden</div><div class="s">Daarna is het gezinswachtwoord weer nodig</div></div><button class="btn danger sm" data-act="logout">Afmelden</button></div>' : '<div class="row"><div class="grow"><div class="t">Demo-modus</div><div class="s">Gegevens staan alleen op dit toestel. Vul firebase-config.js in om alles te delen.</div></div><button class="btn ghost sm" data-act="reset">Demo wissen</button></div>'}
@@ -1109,7 +1129,11 @@ document.addEventListener("click", e => {
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "oefclose") return closeOef();
-  if (d.act === "picker") return openPicker();
+  if (d.act === "picker") return kidView() && parentPin() ? askPin(openPicker) : openPicker();
+  if (d.act === "setpin") return simpleForm("Ouderpincode", "Kies 4 tot 8 cijfers (laat leeg om de vergrendeling uit te zetten)", "", "text", v => {
+    v = v.trim(); if (v && !/^\d{4,8}$/.test(v)) { toast("Gebruik 4 tot 8 cijfers."); return; }
+    setMeta("settings", {...(S.meta.settings || {}), pin: v}); if (mode !== "db") S.meta.settings = {...(S.meta.settings || {}), pin: v};
+    toast(v ? "Ouderpincode ingesteld. Kies nu op de tablet van een kind diens naam." : "Kindvergrendeling staat uit."); render(); });
   if (d.act === "sound") { soundOn = !soundOn; store.set("bve-sound", soundOn ? "1" : "0"); if (soundOn) pling(); render(); return; }
   if (d.act === "logout") return logout();
   if (d.act === "pon") return pushOn();
@@ -1123,7 +1147,7 @@ document.addEventListener("click", e => {
     setMeta("google", v ? {url: v} : {}); if (mode !== "db") { S.meta.google = v ? {url: v} : {}; } G.fetchedAt = null; setTimeout(() => loadGoogle(true), 300); toast(v ? "Gekoppeld! Afspraken worden opgehaald." : "Google Agenda ontkoppeld.");
   });
   if (d.act === "reset") { if (el.dataset.armed) { try { localStorage.removeItem("bve-demo"); localStorage.removeItem("bve-picked"); } catch {} location.reload(); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
-  if (d.who) { who = d.who; store.set("bve-who", who); pushSync(); render(); return; }
+  if (d.who) { const go = () => { who = d.who; store.set("bve-who", who); pushSync(); render(); }; if (locked(d.who)) return askPin(go, `Wisselen naar ${d.who === "all" ? "Iedereen" : (M(d.who)?.name || "een ander profiel")} kan alleen met de ouderpincode.`); go(); return; }
   if (d.tab) { tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
   if (d.sub) { sub = d.sub; render(); return; }
   if (d.new) return openForm(d.new);
