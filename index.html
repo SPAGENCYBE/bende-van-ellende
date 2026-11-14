@@ -280,6 +280,10 @@ nav.tabs button{position:relative}
 
 .gmark{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--c-agenda);color:#1c1530;font-size:10px;font-weight:900;margin-left:6px;vertical-align:2px;border:1.5px solid var(--shade)}
 
+/* ---- profiel ---- */
+.pchip.prof{background:var(--paper-2);border-style:dashed}
+.pchip.prof .label{margin-left:2px}
+.pdiv{flex:none;width:2px;align-self:stretch;background:var(--hair);border-radius:2px;margin:4px 2px}
 /* ---- school ---- */
 .mvbtns{display:flex;gap:4px}
 .smeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px}
@@ -369,12 +373,16 @@ S.meta = { menu:{}, budget:{amount:0}, google:{} };
 let mode = "loading", readOnly = false;
 let tab = TABS.some(t => t[0] === location.hash.slice(1)) ? location.hash.slice(1) : "home";
 let sub = "taken", monthOff = 0;
-let who = store.get("bve-who") || "all";
+let who = store.get("bve-who") || "all";      // profiel van dit toestel
+let viewWho = store.get("bve-view") || "all"; // filter voor ouders en gezinsscherm
 
 const M = id => S.members.find(m => m.id === id);
 const avatar = (m, cls="") => m ? `<span class="av ${cls}" style="--c:${esc(m.color||COLORS[0])}" title="${esc(m.name)}">${esc(initials(m.name))}</span>` : "";
 const avs = ids => `<span class="avs">${(ids||[]).map(M).filter(Boolean).map(m => avatar(m)).join("")}</span>`;
-const mine = (field) => x => who === "all" || !x[field] || (Array.isArray(x[field]) ? (x[field].length === 0 || x[field].includes(who)) : x[field] === who);
+const isKid = () => { const m = S.members.find(x => x.id === who); return !!m && m.role === "kind"; };
+const fWho = () => isKid() ? who : (viewWho !== "all" && !S.members.some(x => x.id === viewWho) ? "all" : viewWho);
+const mine = (field) => x => { const f = fWho(); return f === "all" || !x[field] || (Array.isArray(x[field]) ? (x[field].length === 0 || x[field].includes(f)) : x[field] === f); };
+const KID_HIDDEN_TABS = ["geld", "admin"];
 
 // ---------- data layer ----------
 // Demo: alles in localStorage op dit toestel. Live: Firebase (Firestore + login), ingesteld in firebase-config.js
@@ -486,7 +494,7 @@ function openPicker(){
   el.innerHTML = `<div class="pick-in"><div class="word" aria-hidden="true"><span class="w1">Bende</span><span class="w2">van</span><span class="w3">ellende</span></div>
     <h2>Wie ben jij?</h2><div class="pick-grid">${S.members.map(m => `<button data-pick="${m.id}">${avatar(m,"xl")}<span>${esc(m.name)}</span></button>`).join("")}
     <button data-pick="all"><span class="av xl all-av">★</span><span>Iedereen</span></button></div>
-    <p class="lead">Deze tablet onthoudt je keuze. Wisselen kan altijd bovenaan.</p></div>`;
+    <p class="lead">Dit toestel blijft op dit profiel staan. Wisselen kan later alleen met de ouderpincode.</p></div>`;
   el.hidden = false;
 }
 let actx = null, soundOn = store.get("bve-sound") !== "0";
@@ -591,13 +599,13 @@ function onMessages(list){
 }
 function sendMsg(text){
   text = String(text || "").trim(); if (!text) return;
-  if (who === "all" || !M(who)) { toast("Kies eerst bovenaan wie je bent."); return; }
+  if (who === "all" || !M(who)) { toast("Dit is het gezinsscherm. Kies eerst een profiel (De bende → Wisselen)."); return; }
   chatStick = true; chatDraft = "";
   add("messages", {text: text.slice(0, 1000), from: who, at: Date.now(), pinned: false});
   if (mode !== "db") lastMsgAt = Date.now();
 }
 function toggleReact(id, e){
-  if (who === "all" || !M(who)) { toast("Kies eerst bovenaan wie je bent."); return; }
+  if (who === "all" || !M(who)) { toast("Dit is het gezinsscherm. Kies eerst een profiel (De bende → Wisselen)."); return; }
   const m = S.messages.find(x => x.id === id); if (!m) return;
   const rx = JSON.parse(JSON.stringify(m.react || {})), ids = new Set(rx[e] || []);
   ids.has(who) ? ids.delete(who) : ids.add(who);
@@ -628,7 +636,7 @@ function vChat(){
   <div class="card chat"><div class="chatlog" id="chatlog">${list.length ? msgsHtml(list) : `<div class="empty" style="margin:auto">Nog geen berichten. Zeg eens hallo tegen de bende!</div>`}</div>
   ${me ? `<form class="composer" id="cform">${avatar(me)}<input type="text" id="cmsg" value="${esc(chatDraft)}" placeholder="Bericht aan de bende…" autocomplete="off" maxlength="1000" enterkeyhint="send" aria-label="Bericht"><button class="btn">Stuur</button></form>
     <div class="quickemo">${EMO.concat(["🍕","🚗","🏠"]).map(e => `<button type="button" data-qemo="${e}" aria-label="Stuur ${e}">${e}</button>`).join("")}</div>`
-  : `<div class="whoask"><b>Wie ben jij?</b> Kies je naam om mee te babbelen.<div class="chips-row">${S.members.map(m => `<button class="pchip" data-who="${m.id}">${avatar(m)}${esc(m.name)}</button>`).join("")}</div></div>`}</div>`;
+  : `<div class="whoask"><b>Dit is het gezinsscherm.</b> Om te babbelen kies je een profiel (met de ouderpincode).<div class="chips-row">${S.members.map(m => `<button class="pchip" data-pick="${m.id}" data-gate="1">${avatar(m)}${esc(m.name)}</button>`).join("")}</div></div>`}</div>`;
 }
 function openMsg(id){
   const m = S.messages.find(x => x.id === id); if (!m) return;
@@ -815,9 +823,13 @@ function render(){
   $("#actions").innerHTML = `${deferredInstall && !standalone() ? '<button class="btn sm" data-act="install">App installeren</button>' : ""}<button class="btn ghost sm" data-act="wall" title="Groot scherm voor aan de muur">Muurstand</button>`;
   renderWall();
   if (who !== "all" && !M(who) && mode !== "loading" && S.members.length) who = "all";
-  $("#people").innerHTML = `<button class="pchip all" aria-pressed="${who==="all"}" data-who="all">Iedereen</button>` +
-    S.members.map(m => `<button class="pchip" aria-pressed="${who===m.id}" data-who="${m.id}">${avatar(m)}${esc(m.name)}</button>`).join("");
-  $("#tabs").innerHTML = TABS.map(([k,l]) => `<button data-tab="${k}" ${tab===k?'aria-current="page"':""}><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${({huis:"Huis", bende:"Bende"})[k] ? `<span class="lgl">${l}</span><span class="sml">${({huis:"Huis", bende:"Bende"})[k]}</span>` : l}${k === "babbel" && unread && tab !== "babbel" ? `<span class="badge num">${unread > 9 ? "9+" : unread}</span>` : ""}</button>`).join("");
+  const me = M(who);
+  if (isKid() && KID_HIDDEN_TABS.includes(tab)) tab = "home";
+  $("#people").innerHTML = mode === "loading" ? "" : isKid()
+    ? `<button class="pchip" aria-pressed="true" data-act="picker" title="Ander profiel kiezen (ouderpincode)">${avatar(me)}${esc(me.name)}</button>`
+    : `<button class="pchip prof" data-act="picker" title="Profiel van dit toestel wisselen">${me ? avatar(me) : '<span class="av all-av">★</span>'}<span>${me ? esc(me.name) : "Gezinsscherm"}</span><span class="label">profiel</span></button><span class="pdiv" aria-hidden="true"></span><button class="pchip all" aria-pressed="${fWho()==="all"}" data-who="all">Iedereen</button>` +
+      S.members.map(m => `<button class="pchip" aria-pressed="${fWho()===m.id}" data-who="${m.id}">${avatar(m)}${esc(m.name)}</button>`).join("");
+  $("#tabs").innerHTML = TABS.filter(([k]) => !(isKid() && KID_HIDDEN_TABS.includes(k))).map(([k,l]) => `<button data-tab="${k}" ${tab===k?'aria-current="page"':""}><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${({huis:"Huis", bende:"Bende"})[k] ? `<span class="lgl">${l}</span><span class="sml">${({huis:"Huis", bende:"Bende"})[k]}</span>` : l}${k === "babbel" && unread && tab !== "babbel" ? `<span class="badge num">${unread > 9 ? "9+" : unread}</span>` : ""}</button>`).join("");
   const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, school:vSchool, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
@@ -891,10 +903,10 @@ function vHome(){
   <div class="grid">
     <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Deze week</span> <button class="link" data-tab="agenda">Agenda</button></h3>${eventRows(ev)}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span> <button class="link" data-tab="huis" data-sub="taken">Alle taken</button></h3>${taskRows(tasks.slice(0,7))}</div>
-    <div class="card" style="--cc:var(--c-geld)"><h3><span class="tag">Geld deze maand</span> <button class="link" data-tab="geld">Details</button></h3>
+    ${kidView() ? "" : `<div class="card" style="--cc:var(--c-geld)"><h3><span class="tag">Geld deze maand</span> <button class="link" data-tab="geld">Details</button></h3>
       <div class="kv"><span>Uitgegeven</span><b class="num">${eur(ms.spent)}</b></div>
       ${budget?`<div class="bar ${ms.spent>budget?"over":""}" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="kv" style="color:var(--muted)"><span>Budget ${eur(budget)}</span><span class="num">${ms.spent>budget?`${eur(ms.spent-budget)} over`:`${eur(budget-ms.spent)} over te besteden`}</span></div>`:`<p style="color:var(--muted);margin:8px 0 0">Nog geen maandbudget ingesteld.</p>`}
-      <div class="kv" style="margin-top:10px"><span>Vaste lasten per maand</span><b class="num">${eur(fixedMonthly())}</b></div></div>
+      <div class="kv" style="margin-top:10px"><span>Vaste lasten per maand</span><b class="num">${eur(fixedMonthly())}</b></div></div>`}
     ${(() => { const sl = openSchool().filter(x => !x.due || daysBetween(today(), x.due) <= 7).slice(0, 5); return sl.length ? `<div class="card" style="--cc:var(--c-school)"><h3><span class="tag">School</span> <button class="link" data-tab="school">Alles</button></h3>${schoolRows(sl)}</div>` : ""; })()}
     <div class="card note" style="--cc:var(--c-huis)"><h3><span class="tag">Boodschappen</span> <button class="link" data-tab="huis" data-sub="winkel">Lijst</button></h3>${open.length ? `<div class="list">${open.slice(0,6).map(x=>`<div class="row"><div class="grow t">${esc(x.item)}</div>${x.qty?`<span class="s">${esc(x.qty)}</span>`:""}</div>`).join("")}</div>${open.length>6?`<p class="s" style="color:var(--muted);margin:6px 0 0">en nog ${open.length-6}</p>`:""}` : empty("Niets nodig. De kast is vol.")}</div>
     ${docs.length?`<div class="card" style="--cc:var(--c-admin)"><h3><span class="tag">Vervalt binnenkort</span> <button class="link" data-tab="admin">Admin</button></h3><div class="list">${docs.map(x=>`<div class="row click" data-edit="docs:${x.id}"><div class="grow"><div class="t">${esc(x.title)}</div><div class="s">${esc(x.kind||"")} · ${fmtDay(x.expires)}</div></div>${docStatus(x)}</div>`).join("")}</div></div>`:""}
@@ -911,7 +923,7 @@ function vAgenda(){
 
 // ---------- kindvergrendeling ----------
 const parentPin = () => (S.meta.settings && S.meta.settings.pin) || "";
-const locked = target => kidView() && parentPin() && target !== who;
+const locked = target => !!parentPin() && target !== who && localStorage.getItem("bve-picked") === "1";
 function askPin(onOk, title){
   showSheet(`<form id="pinForm"><h3><span>Ouderpincode</span></h3><p class="s" style="font-weight:700;margin:-6px 0 12px">${esc(title || "Alleen ouders kunnen van profiel wisselen.")}</p>
     <div class="field"><label for="f_pin">Pincode</label><input type="password" id="f_pin" inputmode="numeric" autocomplete="off" maxlength="8" style="width:100%;border:var(--bw) solid var(--line);background:var(--paper);border-radius:12px;padding:9px 12px;font-weight:900;font-size:22px;letter-spacing:.3em"></div>
@@ -923,7 +935,7 @@ function askPin(onOk, title){
 }
 function pinRow(){
   if (kidView()) return parentPin() ? `<div class="row"><div class="grow"><div class="t">Kindvergrendeling</div><div class="s">Aan. Wisselen van profiel kan alleen met de ouderpincode.</div></div></div>` : "";
-  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Kindvergrendeling</div><div class="s">${parentPin() ? "Aan. Kiest een kind zichzelf, dan kan het alleen met de ouderpincode wisselen en ziet het bij School enkel zijn eigen taken." : "Uit. Stel een ouderpincode in, zodat kinderen niet naar een ander profiel kunnen wisselen."}</div></div><button class="btn ${parentPin() ? "ghost " : ""}sm" data-act="setpin">${parentPin() ? "Pincode wijzigen" : "Pincode instellen"}</button></div>`;
+  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Kindvergrendeling</div><div class="s">${parentPin() ? "Aan. Elk toestel blijft op zijn profiel staan; wisselen kan alleen met deze pincode. Kinderen zien enkel hun eigen dingen, zonder Geld en Admin." : "Nog geen pincode. Stel er een in, zodat niemand zomaar van profiel kan wisselen."}</div></div><button class="btn ${parentPin() ? "ghost " : ""}sm" data-act="setpin">${parentPin() ? "Pincode wijzigen" : "Pincode instellen"}</button></div>`;
 }
 
 // ---------- school ----------
@@ -957,7 +969,7 @@ function schoolRows(list){
       <div class="smeta">${dueChip(x)}${oef && !x.done ? `<button class="btn sm" data-oef="${oef.id}" data-for="${esc(x.who || "")}">✏️ Oefenen</button>` : ""}</div></div>${m ? avatar(m) : ""}</div>`;
   }).join("") + `</div>`;
 }
-const kidView = () => M(who)?.role === "kind";
+const kidView = () => isKid();
 const schoolMine = x => kidView() ? x.who === who : mine("who")(x);
 function openSchool(){
   const t = today();
@@ -1151,11 +1163,11 @@ document.addEventListener("click", e => {
   if (d.gev) return openGEvent(d.gev);
   if (d.oef) return openOef(d.oef, d.for);
   if (d.mv) { const [id, dir] = d.mv.split("|"); moveMember(id, +dir); return; }
-  if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); pushSync(); $("#picker").hidden = true; render(); return; }
+  if (d.pick) { const go = () => { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); viewWho = "all"; store.set("bve-view", "all"); pushSync(); $("#picker").hidden = true; tab = "home"; render(); }; if (d.gate && locked(d.pick)) return askPin(go, "Een profiel kiezen kan alleen met de ouderpincode."); go(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "oefclose") return closeOef();
-  if (d.act === "picker") return kidView() && parentPin() ? askPin(openPicker) : openPicker();
+  if (d.act === "picker") return parentPin() && localStorage.getItem("bve-picked") === "1" ? askPin(openPicker, "Het profiel van dit toestel wisselen kan alleen met de ouderpincode.") : openPicker();
   if (d.act === "setpin") return simpleForm("Ouderpincode", "Kies 4 tot 8 cijfers (laat leeg om de vergrendeling uit te zetten)", "", "text", v => {
     v = v.trim(); if (v && !/^\d{4,8}$/.test(v)) { toast("Gebruik 4 tot 8 cijfers."); return; }
     setMeta("settings", {...(S.meta.settings || {}), pin: v}); if (mode !== "db") S.meta.settings = {...(S.meta.settings || {}), pin: v};
@@ -1173,7 +1185,7 @@ document.addEventListener("click", e => {
     setMeta("google", v ? {url: v} : {}); if (mode !== "db") { S.meta.google = v ? {url: v} : {}; } G.fetchedAt = null; setTimeout(() => loadGoogle(true), 300); toast(v ? "Gekoppeld! Afspraken worden opgehaald." : "Google Agenda ontkoppeld.");
   });
   if (d.act === "reset") { if (el.dataset.armed) { try { localStorage.removeItem("bve-demo"); localStorage.removeItem("bve-picked"); } catch {} location.reload(); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
-  if (d.who) { const go = () => { who = d.who; store.set("bve-who", who); pushSync(); render(); }; if (locked(d.who)) return askPin(go, `Wisselen naar ${d.who === "all" ? "Iedereen" : (M(d.who)?.name || "een ander profiel")} kan alleen met de ouderpincode.`); go(); return; }
+  if (d.who) { if (isKid()) return; viewWho = d.who; store.set("bve-view", viewWho); render(); return; }
   if (d.tab) { tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
   if (d.sub) { sub = d.sub; render(); return; }
   if (d.new) return openForm(d.new);
