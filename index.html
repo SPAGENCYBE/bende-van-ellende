@@ -1434,6 +1434,16 @@ document.addEventListener("submit", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#oefen").hidden) closeOef(); else if ($("#modal").innerHTML) closeSheet(); else if (wallOpen) toggleWall(); } });
 $("#loginForm").addEventListener("submit", doLogin);
+// In een afgeschermd venster (bv. de Webpagina-widget van Vuenara) blokkeert de browser formulieren.
+// Daarom sturen we het "versturen" zelf door, met dezelfde controle op verplichte velden.
+if (window.self !== window.top) {
+  document.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b || !b.form || (b.getAttribute("type") || "submit") !== "submit") return;
+    e.preventDefault();
+    if (!b.form.reportValidity()) return;
+    b.form.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));
+  }, true);
+}
 
 // vegen tussen onderdelen
 let sx = 0, sy = 0, st = 0, swipeOk = false;
