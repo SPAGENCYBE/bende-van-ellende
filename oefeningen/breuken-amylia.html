@@ -603,7 +603,12 @@ function addStar(){scores[player]=(scores[player]||0)+1;store.set('scores',score
 /* ---------- checking ---------- */
 const PRAISE=['Super! ⭐','Knap gedaan! 🎉','Juist! 💪','Top! 🌟','Helemaal goed! ✅','Yes! 🙌'];
 function fb(card,cls,html){const f=card.querySelector('.fb');f.className='fb '+cls;f.innerHTML=html;}
+/* Bende van ellende: voortgang doorgeven aan de app */
+const LES_NAAM={les11:'Les 11 · Procenten',les12:'Les 12 · Rationale getallen',les13:'Les 13 · Gemengde getallen',test:'Grote test'};
+function bveSend(msg){try{if(window.parent!==window)window.parent.postMessage(Object.assign({speler:player,oefening:'breuken'},msg),location.origin==='null'?'*':location.origin);}catch(e){}}
 function solved(q,card){q.done=true;card.classList.add('solved');addStar();
+  {const sec=(card.closest('section.view')||{}).id||'';const les=sec.replace('v-','');const h=card.closest('.set')&&card.closest('.set').querySelector('h3');
+   bveSend({type:'bve-oef',les:LES_NAAM[les]||les,set:h?h.textContent.replace(/^🎯\s*/,''):(les==='test'?'Grote test':''),tries:q.tries});}
   fb(card,'good',`<b>${pick(PRAISE)}</b>`+(q.tries>1?`<details open><summary>Hoe zat het ook alweer?</summary>${q.explain}</details>`:`<details><summary>Uitleg bekijken</summary>${q.explain}</details>`));}
 function wrong(q,card){
   if(q.tries===1) fb(card,'bad',`Nog niet helemaal. ${q.hint?'<b>Tip:</b> '+q.hint:''} Probeer nog eens!`);
@@ -645,6 +650,7 @@ document.getElementById('scoretest').onclick=()=>{
   if(open) msg+=` (${open} nog niet afgewerkt)`;
   document.getElementById('result').textContent=msg;
   if(best[player]==null||first>best[player]){best[player]=first;store.set('best',best);renderPlayers();}
+  bveSend({type:'bve-test',score:first,open:open});
 };
 
 /* ---------- views ---------- */

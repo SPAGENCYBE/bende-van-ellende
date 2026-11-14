@@ -285,6 +285,13 @@ nav.tabs button{position:relative}
 .pchip.prof .label{margin-left:2px}
 .pdiv{flex:none;width:2px;align-self:stretch;background:var(--hair);border-radius:2px;margin:4px 2px}
 /* ---- school ---- */
+.prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
+.prog:first-of-type{border-top:0;padding-top:0}
+.prog-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prog-h b{font-weight:900}
+.prog-h .s{color:var(--muted);font-weight:700;margin-left:auto}
+.prog-stats{display:flex;gap:6px;flex-wrap:wrap}
+.prog-les{display:grid;gap:4px}
 .mvbtns{display:flex;gap:4px}
 .smeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .smeta:empty{display:none}
@@ -367,7 +374,7 @@ const ICONS = {
 const TABS = [["home","Overzicht"],["babbel","Babbels"],["agenda","Agenda"],["huis","Huishouden"],["school","School"],["geld","Geld"],["admin","Admin"],["bende","De bende"]];
 
 // ---------- state ----------
-const COLS = ["messages","members","events","tasks","school","shopping","expenses","costs","pots","docs","contacts"];
+const COLS = ["messages","oefenlog","members","events","tasks","school","shopping","expenses","costs","pots","docs","contacts"];
 const S = {}; COLS.forEach(c => S[c] = []);
 S.meta = { menu:{}, budget:{amount:0}, google:{} };
 let mode = "loading", readOnly = false;
@@ -425,6 +432,9 @@ function sample(){
   S.members = [a,b,c,d];
   S.events = [{id:uid(),title:"Zwemles",date:t,time:"16:30",who:["m3"]},{id:uid(),title:"Oudercontact school",date:addDays(t,2),time:"19:00",who:["m1","m2"]},{id:uid(),title:"Etentje bij oma",date:addDays(t,5),time:"12:00",who:[]}];
   S.tasks = [{id:uid(),title:"Vaatwasser uitladen",who:"m3",repeat:"daily",points:5},{id:uid(),title:"Kamer opruimen",who:"m4",repeat:"weekly",points:10},{id:uid(),title:"Vuilniszakken buiten",who:"m1",repeat:"weekly",points:0},{id:uid(),title:"Gras maaien",who:"",repeat:"none",points:15}];
+  { const H = 3600e3, n0 = Date.now(); S.oefenlog = [
+    ...[1,1,2,1,1,3,1,1].map((tr, i) => ({id:uid(), who:"m3", oef:"breuken-amylia", kind:"q", les:i < 4 ? "Les 11 · Procenten" : "Les 13 · Gemengde getallen", set:i < 4 ? "Hoeveel is … % van …?" : "Onechte breuk → gemengd getal", tries:tr, at:n0 - 26*H + i*90e3})),
+    {id:uid(), who:"m3", oef:"breuken-amylia", kind:"test", les:"Grote test", score:7, open:0, at:n0 - 25*H}]; }
   S.school = [{id:uid(),title:"Breuken oefenen voor de toets",kind:"Oefenen",vak:"Wiskunde",who:"m3",due:addDays(t,3),oef:"breuken-amylia",done:false},{id:uid(),title:"Spreekbeurt over haaien",kind:"Opdracht",vak:"Nederlands",who:"m4",due:addDays(t,9),done:false},{id:uid(),title:"Turnzak meebrengen",kind:"Meebrengen",vak:"",who:"m4",due:addDays(t,1),done:false}];
   S.shopping = [{id:uid(),item:"Melk",done:false},{id:uid(),item:"Brood",done:false},{id:uid(),item:"Wasmiddel",done:true}];
   S.expenses = [{id:uid(),desc:"Colruyt",amount:86.4,cat:"Boodschappen",date:t,who:"m2"},{id:uid(),desc:"Tanken",amount:62,cat:"Auto",date:addDays(t,-3),who:"m1"}];
@@ -465,7 +475,8 @@ function startSync(){
   const {fs, fsM} = FB;
   const onErr = e => { if (e && e.code === "permission-denied") toast("Dit account heeft geen toegang. Controleer de UID in de Firestore-regels."); };
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
-  COLS.filter(c => c !== "messages").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
+  fsM.onSnapshot(fsM.query(fsM.collection(fs, "oefenlog"), fsM.where("at", ">", Date.now() - 60 * 864e5), fsM.orderBy("at", "desc"), fsM.limit(3000)), snap => { S.oefenlog = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
+  COLS.filter(c => c !== "messages" && c !== "oefenlog").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
   ["menu","budget","google","settings"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
 }
 function showLogin(){
@@ -966,7 +977,7 @@ function schoolRows(list){
     const m = M(x.who), oef = oefFor(x);
     return `<div class="row ${x.done ? "done" : ""}"><input type="checkbox" class="check" data-school="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.title)} afvinken">
       <div class="grow"><div ${kidView() ? "" : `class="click" data-edit="school:${x.id}" style="cursor:pointer"`}><div class="t">${KIND_EMO[x.kind] || "📚"} ${esc(x.title)}</div><div class="s">${[x.kind, x.vak, x.note].filter(Boolean).map(esc).join(" · ")}</div></div>
-      <div class="smeta">${dueChip(x)}${oef && !x.done ? `<button class="btn sm" data-oef="${oef.id}" data-for="${esc(x.who || "")}">✏️ Oefenen</button>` : ""}</div></div>${m ? avatar(m) : ""}</div>`;
+      <div class="smeta">${dueChip(x)}${oef ? (() => { const L = S.oefenlog.filter(y => y.who === x.who && y.oef === oef.id && y.kind === "q"); return L.length ? `<span class="pill n num">★ ${L.length} · ${whenTxt(Math.max(...L.map(y => y.at)))}</span>` : ""; })() : ""}${oef && !x.done ? `<button class="btn sm" data-oef="${oef.id}" data-for="${esc(x.who || "")}">✏️ Oefenen</button>` : ""}</div></div>${m ? avatar(m) : ""}</div>`;
   }).join("") + `</div>`;
 }
 const kidView = () => isKid();
@@ -988,6 +999,7 @@ function vSchool(){
       <div class="oefgrid">${oefVisible().length ? oefVisible().map(o => { const om = oefMember(o); return `<button class="oeftile" data-oef="${o.id}"><span class="oefemo">${o.emoji}</span><b>${esc(o.title)}</b>${o.voor ? `<span class="oefwho">${om ? avatar(om) : ""} Voor ${esc(o.voor)}</span>` : ""}<span class="s">${esc(o.sub)}</span><span class="pill pts">Openen</span></button>`; }).join("") : empty("Nog geen oefeningen voor jou.")}</div>
       ${stars.length ? `<div class="label" style="margin-top:14px">Oefensterren</div>${stars.sort((a, b) => b.oefenSterren - a.oefenSterren).map(m => `<div class="rank">${avatar(m)}<span style="flex:1;font-weight:800">${esc(m.name)}</span><span class="pill pts num">★ ${+m.oefenSterren}</span></div>`).join("")}` : `<p class="s" style="color:var(--muted);font-weight:700;margin:12px 0 0">Elke juiste oefening geeft een oefensterretje. Die tellen apart van de punten voor huistaken.</p>`}
     </div>
+    ${progressCard()}
   </div>`;
 }
 function openOef(id, forWho){
@@ -1006,8 +1018,44 @@ function addOefenSter(name){
 }
 window.addEventListener("message", e => {
   if (e.origin !== location.origin && !(location.origin === "null" && e.origin === "null")) return;
-  if (e.data && e.data.type === "bve-ster" && e.data.speler) addOefenSter(e.data.speler);
+  if (!e.data || !e.data.speler) return;
+  if (e.data.type === "bve-ster") addOefenSter(e.data.speler);
+  if (e.data.type === "bve-oef" || e.data.type === "bve-test") logOefen(e.data);
 });
+// ---------- voortgang van de oefeningen ----------
+function logOefen(d){
+  const m = S.members.find(x => normName(x.name) === normName(d.speler)); if (!m) return;
+  const o = OEFENINGEN.find(x => x.id.startsWith(d.oefening || "") && normName(x.voor) === normName(m.name)) || OEFENINGEN.find(x => x.id === d.oefening);
+  const row = {who:m.id, oef:o ? o.id : (d.oefening || ""), at:Date.now()};
+  if (d.type === "bve-test") Object.assign(row, {kind:"test", les:"Grote test", score:+d.score || 0, open:+d.open || 0});
+  else Object.assign(row, {kind:"q", les:String(d.les || "").slice(0, 60), set:String(d.set || "").slice(0, 80), tries:+d.tries || 1});
+  add("oefenlog", row);
+}
+function whenTxt(ms){
+  const d = new Date(ms), day = ds(d), hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return day === today() ? `vandaag ${hm}` : day === addDays(today(), -1) ? `gisteren ${hm}` : `${fmtDay(day)} ${hm}`;
+}
+function progressFor(m){
+  const L = S.oefenlog.filter(x => x.who === m.id), q = L.filter(x => x.kind === "q"), tests = L.filter(x => x.kind === "test").sort((a, b) => b.at - a.at);
+  if (!L.length) return `<div class="prog"><div class="prog-h">${avatar(m)}<b>${esc(m.name)}</b><span class="s">Nog niet geoefend</span></div></div>`;
+  const last = Math.max(...L.map(x => x.at)), t0 = parse(today()).getTime(), w0 = t0 - 6 * 864e5;
+  const pct = list => list.length ? Math.round(list.filter(x => +x.tries === 1).length / list.length * 100) : 0;
+  const lessen = {}; q.forEach(x => { (lessen[x.les || "Andere"] ||= []).push(x); });
+  const best = tests.length ? Math.max(...tests.map(x => x.score)) : null;
+  return `<div class="prog"><div class="prog-h">${avatar(m)}<b>${esc(m.name)}</b><span class="s">Laatst geoefend: ${whenTxt(last)}</span></div>
+    <div class="prog-stats"><span class="pill pts num">★ ${q.filter(x => x.at >= t0).length} vandaag</span><span class="pill pts num">★ ${q.filter(x => x.at >= w0).length} deze week</span><span class="pill ${pct(q) >= 70 ? "ok" : pct(q) >= 40 ? "warn" : "bad"} num">${pct(q)} % in één keer juist</span></div>
+    ${Object.entries(lessen).sort((a, b) => a[0].localeCompare(b[0], "nl")).map(([les, list]) => { const p = pct(list); return `<div class="prog-les"><div class="kv"><span>${esc(les)}</span><span class="num">${list.length} juist · ${p} % in één keer</span></div><div class="bar" style="height:8px"><i style="width:${p}%"></i></div>
+      <div class="s" style="color:var(--muted)">${[...new Set(list.map(x => x.set).filter(Boolean))].map(esc).join(" · ")}</div></div>`; }).join("")}
+    ${tests.length ? `<div class="kv" style="margin-top:8px"><span>🏆 Grote test</span><span class="num">laatste ${tests[0].score}/10 (${whenTxt(tests[0].at)}) · beste ${best}/10</span></div>` : ""}
+  </div>`;
+}
+function progressCard(){
+  const kids = kidView() ? [M(who)] : S.members.filter(m => m.role === "kind" && (fWho() === "all" || fWho() === m.id));
+  const shown = kidView() ? kids : kids.filter(m => S.oefenlog.some(x => x.who === m.id) || fWho() === m.id);
+  return `<div class="card" style="--cc:var(--c-agenda);grid-column:1/-1"><h3><span class="tag">Voortgang</span><span class="s" style="color:var(--muted);font-weight:700">laatste 60 dagen</span></h3>
+    ${shown.length ? shown.map(progressFor).join("") : empty("Nog niemand heeft geoefend. Zodra een kind een oefening maakt, zie je hier wat het gedaan heeft.")}</div>`;
+}
+
 function toggleSchool(id){
   const x = S.school.find(y => y.id === id); if (!x) return;
   if (!x.done) { confetti(document.querySelector(`[data-school="${id}"]`), 0); pling(); }

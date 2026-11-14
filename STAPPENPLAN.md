@@ -96,6 +96,7 @@ Begin op één tablet bij **De bende** en voeg de echte gezinsleden toe. Op de a
 
 - **Babbels:** de gezinschat. Tik op een bericht om met een emoji te reageren of het op het prikbord te zetten. Vastgezette berichten staan ook op het overzicht en in de muurstand. Een rood bolletje bij Babbels toont hoeveel nieuwe berichten er zijn.
 - **School:** schooltaken (huiswerk, toets, opdracht, oefenen, meebrengen) per kind met een datum, plus oefeningen zoals *Breuken & procenten*. Elke juiste oefening geeft een oefensterretje aan het kind met dezelfde naam. Nieuwe oefeningen zet je als HTML-bestand in de map `oefeningen/` en voeg je toe aan de lijst `OEFENINGEN` in `index.html`.
+- **Voortgang:** bij School zie je per kind wat het geoefend heeft: per les hoeveel juist en hoeveel in één keer, testscores en wanneer (laatste 60 dagen).
 - **Toestelprofiel:** bij de eerste start kies je wie dit toestel gebruikt. Een kind ziet daarna enkel zijn eigen dingen (zonder Geld en Admin); een ouder ziet alles en filtert met de naamknoppen. Wisselen van profiel kan alleen met de ouderpincode.
 - **Kindvergrendeling:** stel bij De bende → Deze tablet een ouderpincode in. Kiest een kind zichzelf, dan ziet het bij School alleen zijn eigen taken (zonder toevoegen of aanpassen) en kan het alleen met de pincode van profiel wisselen.
 - **Muurstand:** knop bovenaan. Grote klok, de dag van vandaag, taken en het avondeten. Het scherm blijft aan zolang de muurstand open staat.
