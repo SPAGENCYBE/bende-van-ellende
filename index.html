@@ -310,6 +310,32 @@ nav.tabs button{position:relative}
 .photobtn img.ok{min-height:0;min-width:0}
 .photoview img,.sheet-photo{display:block;max-width:100%;max-height:70vh;margin:0 auto;border-radius:14px}
 .sheet-photo{max-height:40vh;margin-bottom:10px}
+
+/* ---- babbels op de gsm ---- */
+.mconvs{display:flex;flex-direction:column;background:var(--paper);border:var(--bw) solid var(--line);border-radius:var(--r);box-shadow:4px 4px 0 var(--shade);overflow:hidden}
+.mconv{display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;border-top:2px dashed var(--hair);background:none;text-align:left;color:var(--ink);width:100%}
+.mconv:first-child{border-top:0}
+.mconv:active{background:var(--paper-2)}
+.mconv .cv{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mconv .cvtop{display:flex;align-items:center;gap:6px}
+.mconv .cvtop b{font-weight:900;font-size:17px}
+.mconv .lock{font-size:12px}
+.mconv .tt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:800}
+.mconv .s{font-size:14px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbadge{min-width:24px;height:24px;border-radius:99px;background:var(--bad);color:#fff;font-size:12px;font-weight:900;display:grid;place-items:center;padding:0 6px}
+.mchat{position:fixed;inset:0;z-index:12;background:var(--paper);display:flex;flex-direction:column;height:100dvh;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.mchat-top{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:var(--bw) solid var(--line);background:var(--paper-2)}
+.mchat-top b{font-weight:900;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mpin{padding:8px 12px 0}
+.mpin .pin{width:100%;transform:none;padding:6px 10px;font-size:14px}
+.mchat .chatlog{flex:1;height:auto;min-height:0;padding:12px}
+.mchat .quickemo{padding:4px 10px;border-top:var(--bw) solid var(--line)}
+.mchat .composer{padding:8px 10px;border-top:0;gap:8px}
+.mchat .composer .btn{padding:10px 14px;font-size:18px}
+.mchat .whoask{border-top:var(--bw) solid var(--line)}
+body.chatfull{overflow:hidden}
+body.chatfull nav.tabs{display:none}
 /* ---- school ---- */
 .prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
 .prog:first-of-type{border-top:0;padding-top:0}
@@ -747,9 +773,32 @@ function convList(){
     return `<button class="conv ${curKey() === it.key ? "on" : ""}" data-chat="${it.id}" role="tab" aria-selected="${curKey() === it.key}">${it.av}<span class="cv"><b>${esc(it.name)}</b><span class="s">${last ? esc((last.from === who ? "Jij: " : "") + msgPreview(last)).slice(0, 40) : it.id === "all" ? "Iedereen samen" : "Privé"}</span></span>${n ? `<span class="badge num">${n > 9 ? "9+" : n}</span>` : ""}</button>`;
   }).join("")}</div>`;
 }
+const isPhone = () => matchMedia("(max-width:720px)").matches;
+let mChatOpen = false; // gsm: gesprek open (volledig scherm) of de lijst met gesprekken
+function convRows(){
+  const items = [{id: "all", key: "all", name: "De bende", av: '<span class="av lg all-av">★</span>'}, ...(who === "all" ? [] : S.members.filter(m => m.id !== who).map(m => ({id: m.id, key: dmKey(who, m.id), name: m.name, av: avatar(m, "lg")})))];
+  return items.map(it => ({...it, last: S.messages.filter(m => msgKey(m) === it.key).slice(-1)[0], n: unreadOf(it.key)}))
+    .sort((a, b) => (a.id === "all" ? -1 : b.id === "all" ? 1 : (b.last?.at || 0) - (a.last?.at || 0)));
+}
+function vChatList(){
+  return `<div class="sechead chathead"><h2>Babbels</h2></div><div class="mconvs">${convRows().map(it => {
+    const t = it.last ? new Date(it.last.at) : null, tt = t ? (ds(t) === today() ? `${pad(t.getHours())}:${pad(t.getMinutes())}` : dayLabel(ds(t))) : "";
+    return `<button class="mconv" data-chat="${it.id}">${it.av}<span class="cv"><span class="cvtop"><b>${esc(it.name)}</b>${it.id !== "all" ? '<span class="lock" aria-label="privé">🔒</span>' : ""}<span class="tt">${esc(tt)}</span></span>
+      <span class="s">${it.last ? esc((it.last.from === who ? "Jij: " : it.id === "all" ? (M(it.last.from)?.name || "") + ": " : "") + msgPreview(it.last)) : it.id === "all" ? "Gesprek met de hele bende" : "Nog geen berichten"}</span></span>${it.n ? `<span class="cbadge num">${it.n > 9 ? "9+" : it.n}</span>` : ""}</button>`;
+  }).join("")}</div>`;
+}
 function vChat(){
+  if (isPhone() && !mChatOpen) return vChatList();
   const me = who !== "all" ? M(who) : null, k = curKey(), list = S.messages.filter(m => msgKey(m) === k), pinned = list.filter(m => m.pinned);
   const other = k === "all" ? null : M(chatWith);
+  if (isPhone()) return `<div class="mchat">
+    <div class="mchat-top"><button class="btn ghost sm" data-act="chatback" aria-label="Terug naar de gesprekken">←</button>${other ? `${avatar(other)}<b>${esc(other.name)}</b><span class="pill n">🔒 privé</span>` : `<span class="av all-av">★</span><b>De bende</b>`}</div>
+    ${pinned.length ? `<div class="mpin">${pinned.slice(-1).map(m => `<button class="pin" data-msg="${m.id}">📌<span class="pt">${esc(msgPreview(m))}</span></button>`).join("")}</div>` : ""}
+    <div class="chatlog" id="chatlog">${list.length ? msgsHtml(list) : `<div class="empty" style="margin:auto">${other ? `Nog geen berichten met ${esc(other.name)}. Alleen jullie twee zien dit gesprek.` : "Nog geen berichten. Zeg eens hallo tegen de bende!"}</div>`}</div>
+    ${me ? `<div class="quickemo">${EMO.concat(["🍕","🚗","🏠"]).map(e => `<button type="button" data-qemo="${e}" aria-label="Stuur ${e}">${e}</button>`).join("")}</div>
+      <form class="composer" id="cform"><label class="photopick" title="Foto sturen"><input type="file" id="cphoto" accept="image/*" aria-label="Foto sturen">📷</label><input type="text" id="cmsg" value="${esc(chatDraft)}" placeholder="Bericht…" autocomplete="off" maxlength="1000" enterkeyhint="send" aria-label="Bericht"><button class="btn" aria-label="Versturen">➤</button></form>`
+    : `<div class="whoask">Dit is het gezinsscherm: je kunt hier alleen lezen.</div>`}
+  </div>`;
   return `<div class="sechead chathead"><h2>Babbels</h2><span class="s" style="color:var(--muted);font-weight:800">Tik op een bericht om te reageren of vast te zetten</span></div>
   <div class="chatwrap">${convList()}
   <div class="chatmain">
@@ -771,12 +820,15 @@ function openMsg(id){
 }
 function sizeChat(){
   const log = $("#chatlog"); if (!log) return;
+  if (log.closest(".mchat")) { log.style.height = ""; return; }
   const top = log.getBoundingClientRect().top + window.scrollY;
   const below = (log.parentElement.offsetHeight - log.offsetHeight) + 28;
   const nav = matchMedia("(max-width:720px)").matches ? $("#tabs").offsetHeight : 0;
   log.style.height = Math.max(300, window.innerHeight - top - below - nav) + "px";
 }
-window.addEventListener("resize", () => { if (tab === "babbel") sizeChat(); });
+window.addEventListener("popstate", () => { if (mChatOpen) { mChatOpen = false; render(); window.scrollTo({top:0}); } });
+let wasPhone = isPhone();
+window.addEventListener("resize", () => { if (isPhone() !== wasPhone) { wasPhone = isPhone(); if (tab === "babbel") render(); } else if (tab === "babbel") sizeChat(); });
 
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; render(); });
@@ -936,10 +988,11 @@ function moveMember(id, dir){
 function render(){
   sortMembers();
   const oldLog = $("#chatlog"), oldTop = oldLog ? oldLog.scrollTop : 0, atBottom = !oldLog || oldLog.scrollHeight - oldLog.scrollTop - oldLog.clientHeight < 90;
-  if (tab === "babbel" && mode !== "loading") store.set("bve-seen-" + curKey(), String(Date.now()));
+  if (tab === "babbel" && mode !== "loading" && (!isPhone() || mChatOpen)) store.set("bve-seen-" + curKey(), String(Date.now()));
   const unread = unreadTotal();
   const ae = document.activeElement, keepId = ae && ae.id && ae.closest && ae.closest("#main") ? ae.id : null, keepVal = keepId ? ae.value : null;
   document.body.dataset.sec = tab;
+  document.body.classList.toggle("chatfull", tab === "babbel" && isPhone() && mChatOpen && mode !== "loading");
   $("#today").textContent = fmtLong(today());
   const md = $("#mode");
   md.hidden = mode !== "local"; md.textContent = "Demo: alleen op dit toestel";
@@ -1320,7 +1373,7 @@ document.addEventListener("click", e => {
   if (d.pin) { const m = S.messages.find(x => x.id === d.pin); closeSheet(); if (m) { upd("messages", m.id, {pinned: !m.pinned}); toast(m.pinned ? "Van het prikbord gehaald" : "Op het prikbord gezet"); } return; }
   if (d.delmsg) { if (el.dataset.armed) { closeSheet(); const mm = S.messages.find(x => x.id === d.delmsg); if (mm && mm.photo && mode === "db") FB.fsM.deleteDoc(FB.fsM.doc(FB.fs, "photos", mm.photo)).catch(() => {}); del("messages", d.delmsg); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
   if (d.qemo) { sendMsg(d.qemo); return; }
-  if (d.chat) { chatWith = d.chat; store.set("bve-chat-with", chatWith); chatStick = true; chatDraft = ""; render(); return; }
+  if (d.chat) { if (isPhone() && !mChatOpen) { try { history.pushState({bveChat: 1}, ""); } catch {} } mChatOpen = true; chatWith = d.chat; store.set("bve-chat-with", chatWith); chatStick = true; chatDraft = ""; render(); return; }
   if (d.photoOpen) return openPhoto(d.photoOpen);
   if (d.msg) return openMsg(d.msg);
   if (d.gev) return openGEvent(d.gev);
@@ -1328,6 +1381,7 @@ document.addEventListener("click", e => {
   if (d.mv) { const [id, dir] = d.mv.split("|"); moveMember(id, +dir); return; }
   if (d.pick) { const go = () => { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); viewWho = "all"; store.set("bve-view", "all"); pushSync(); $("#picker").hidden = true; tab = "home"; render(); }; if (d.gate && locked(d.pick)) return askPin(go, "Een profiel kiezen kan alleen met de ouderpincode."); go(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
+  if (d.act === "chatback") { if (history.state && history.state.bveChat) { history.back(); return; } mChatOpen = false; render(); window.scrollTo({top:0}); return; }
   if (d.act === "wall") return toggleWall();
   if (d.act === "oefclose") return closeOef();
   if (d.act === "picker") return parentPin() && localStorage.getItem("bve-picked") === "1" ? askPin(openPicker, "Het profiel van dit toestel wisselen kan alleen met de ouderpincode.") : openPicker();
@@ -1349,7 +1403,7 @@ document.addEventListener("click", e => {
   });
   if (d.act === "reset") { if (el.dataset.armed) { try { localStorage.removeItem("bve-demo"); localStorage.removeItem("bve-picked"); } catch {} location.reload(); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
   if (d.who) { if (isKid()) return; viewWho = d.who; store.set("bve-view", viewWho); render(); return; }
-  if (d.tab) { tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
+  if (d.tab) { if (d.tab !== "babbel") mChatOpen = false; tab = d.tab; if (d.sub) sub = d.sub; monthOff = 0; try { history.replaceState(null, "", "#" + tab); } catch {} render(); window.scrollTo({top:0}); return; }
   if (d.sub) { sub = d.sub; render(); return; }
   if (d.new) return openForm(d.new);
   if (d.edit) { const [c, id] = d.edit.split(":"); return openForm(c, id); }
@@ -1387,7 +1441,7 @@ const mainEl = $("#main");
 mainEl.addEventListener("touchstart", e => {
   if (e.touches.length !== 1) { swipeOk = false; return; }
   const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now();
-  swipeOk = !e.target.closest("input,textarea,select,.people,.scroll-x");
+  swipeOk = !e.target.closest("input,textarea,select,.people,.scroll-x,.mchat,.convs");
 }, {passive:true});
 mainEl.addEventListener("touchend", e => {
   if (!swipeOk) return;
