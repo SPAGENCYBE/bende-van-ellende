@@ -678,6 +678,19 @@ window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
 
 /* ---------- init ---------- */
 renderPlayers();['les11','les12','les13'].forEach(renderLesson);newTest();show(location.hash.slice(1)||'start');
+/* Bende van ellende: sterren en beste score gelijk houden op alle toestellen */
+if(window.parent!==window){
+  window.addEventListener('message',e=>{
+    if(e.origin!==location.origin&&!(location.origin==='null'))return;
+    const d=e.data;if(!d||d.type!=='bve-state')return;
+    const ls=scores[player]||0, lb=best[player];
+    const stars=Math.max(ls,d.known?d.stars:0), b=[lb,d.known?d.best:null].filter(x=>x!=null);
+    const nb=b.length?Math.max(...b):null;
+    if(!d.known||stars!==d.stars||nb!==(d.known?d.best:null)) bveSend({type:'bve-seed',stars:stars,best:nb});
+    if(stars!==ls||nb!==lb){scores[player]=stars;best[player]=nb;store.set('scores',scores);store.set('best',best);renderPlayers();}
+  });
+  bveSend({type:'bve-hello'});
+}
 </script>
 </body>
 </html>

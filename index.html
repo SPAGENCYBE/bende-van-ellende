@@ -426,7 +426,7 @@ const ICONS = {
 const TABS = [["home","Overzicht"],["babbel","Babbels"],["agenda","Agenda"],["huis","Huishouden"],["school","School"],["geld","Geld"],["admin","Admin"],["bende","De bende"]];
 
 // ---------- state ----------
-const COLS = ["messages","oefenlog","members","events","tasks","school","shopping","expenses","costs","pots","docs","contacts"];
+const COLS = ["messages","oefenlog","oefenstate","members","events","tasks","school","shopping","expenses","costs","pots","docs","contacts"];
 const S = {}; COLS.forEach(c => S[c] = []);
 S.meta = { menu:{}, budget:{amount:0}, google:{} };
 let mode = "loading", readOnly = false;
@@ -1009,7 +1009,7 @@ function render(){
   const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, school:vSchool, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
-  loadPhotos();
+  loadPhotos(); pushOefState();
   const log = $("#chatlog");
   if (log) { sizeChat(); log.scrollTop = (chatStick || atBottom) ? log.scrollHeight : oldTop; chatStick = false; }
 }
@@ -1176,15 +1176,43 @@ function openOef(id, forWho){
   el.innerHTML = `<div class="oefbar"><button class="btn ghost sm" data-act="oefclose">← Terug naar de Bende</button><b>${o.emoji} ${esc(o.title)}</b>${m ? `<span class="oefwho">${avatar(m)} ${esc(m.name)}</span>` : ""}</div><iframe src="${esc(url)}" title="${esc(o.title)}"></iframe>`;
   el.hidden = false; document.body.style.overflow = "hidden";
 }
-function closeOef(){ const el = $("#oefen"); el.hidden = true; el.innerHTML = ""; document.body.style.overflow = ""; render(); }
+function closeOef(){ oefFrame = null; const el = $("#oefen"); el.hidden = true; el.innerHTML = ""; document.body.style.overflow = ""; render(); }
 function addOefenSter(name){
   const m = S.members.find(x => normName(x.name) === normName(name)); if (!m) return;
   if (mode === "db") { const {fs, fsM} = FB; fsM.updateDoc(fsM.doc(fs, "members", m.id), {oefenSterren: fsM.increment(1)}).catch(fail); }
   else { m.oefenSterren = (+m.oefenSterren || 0) + 1; local(); }
 }
+// ---------- oefeningen synchroon over alle toestellen ----------
+// Per kind en per oefening: sterren en beste testscore in "oefenstate" (id = <lid>_<oefening>).
+function oefTarget(d){
+  const m = S.members.find(x => normName(x.name) === normName(d.speler)); if (!m) return null;
+  const o = OEFENINGEN.find(x => x.id.startsWith(d.oefening || "") && normName(x.voor) === normName(m.name)) || OEFENINGEN.find(x => x.id === d.oefening);
+  return o ? {m, o, id: m.id + "_" + o.id} : null;
+}
+const oefState = id => S.oefenstate.find(x => x.id === id) || null;
+function writeOefState(id, data){
+  if (mode === "db") { const {fs, fsM} = FB; fsM.setDoc(fsM.doc(fs, "oefenstate", id), data, {merge: true}).catch(fail); }
+  else { const cur = oefState(id); const plain = {...data}; if (plain.stars && plain.stars.inc) plain.stars = (+(cur && cur.stars) || 0) + plain.stars.inc;
+    if (cur) Object.assign(cur, plain); else S.oefenstate.push({id, ...plain}); local(); }
+}
+let oefFrame = null; // {win, origin, id}
+function pushOefState(){
+  if (!oefFrame || $("#oefen").hidden) return;
+  const st = oefState(oefFrame.id);
+  try { oefFrame.win.postMessage({type: "bve-state", known: !!st, stars: st ? +st.stars || 0 : 0, best: st && st.best != null ? +st.best : null}, oefFrame.origin); } catch {}
+}
 window.addEventListener("message", e => {
   if (e.origin !== location.origin && !(location.origin === "null" && e.origin === "null")) return;
   if (!e.data || !e.data.speler) return;
+  const tg = (e.data.type || "").startsWith("bve-") ? oefTarget(e.data) : null;
+  if (e.data.type === "bve-hello" && tg) { oefFrame = {win: e.source, origin: e.origin === "null" ? "*" : e.origin, id: tg.id}; pushOefState(); return; }
+  if (e.data.type === "bve-seed" && tg) {
+    // Eerste keer of offline verdiend: neem het hoogste van toestel en database.
+    const st = oefState(tg.id) || {}, stars = Math.max(+st.stars || 0, +e.data.stars || 0), best = Math.max(st.best == null ? -1 : +st.best, e.data.best == null ? -1 : +e.data.best);
+    writeOefState(tg.id, {who: tg.m.id, oef: tg.o.id, stars, best: best < 0 ? null : best, at: Date.now()}); return;
+  }
+  if (e.data.type === "bve-ster" && tg) writeOefState(tg.id, {who: tg.m.id, oef: tg.o.id, stars: mode === "db" ? FB.fsM.increment(1) : {inc: 1}, at: Date.now()});
+  if (e.data.type === "bve-test" && tg) { const st = oefState(tg.id); if (!st || st.best == null || +e.data.score > +st.best) writeOefState(tg.id, {who: tg.m.id, oef: tg.o.id, best: +e.data.score || 0, at: Date.now()}); }
   if (e.data.type === "bve-ster") addOefenSter(e.data.speler);
   if (e.data.type === "bve-oef" || e.data.type === "bve-test") logOefen(e.data);
 });
