@@ -11,7 +11,7 @@ try {
 } catch (e) { /* zonder internet bij de eerste start: meldingen later */ }
 
 // Na een update van de bestanden: verhoog het versienummer hieronder.
-const VERSIE = "bende-v7";
+const VERSIE = "bende-v8";
 const BASIS = ["./", "./index.html", "./firebase-config.js", "./manifest.webmanifest", "./oefeningen/breuken-procenten.html",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
@@ -42,7 +42,7 @@ self.addEventListener("fetch", e => {
   if (!eigen && !extern) return; // Firebase-verkeer gaat gewoon naar het net
   e.respondWith(caches.open(VERSIE).then(async cache => {
     const opgeslagen = await cache.match(e.request);
-    const vers = fetch(e.request).then(r => {
+    const vers = (eigen ? fetch(e.request.url, {cache: "no-cache", credentials: "same-origin"}) : fetch(e.request)).then(r => {
       if (r.ok || r.type === "opaque") cache.put(e.request, r.clone());
       return r;
     }).catch(() => opgeslagen);

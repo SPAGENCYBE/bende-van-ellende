@@ -1172,7 +1172,15 @@ mainEl.addEventListener("touchend", e => {
   }
 }, {passive:true});
 
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  // Nieuwe versie actief: één keer herladen, zodat je meteen de update ziet.
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+  navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(reg => {
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {});
+}
 
 init();
 })();
