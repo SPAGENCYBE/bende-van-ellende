@@ -336,6 +336,22 @@ nav.tabs button{position:relative}
 .mchat .whoask{border-top:var(--bw) solid var(--line)}
 body.chatfull{overflow:hidden}
 body.chatfull nav.tabs{display:none}
+
+/* ---- grote schermen (tv, keukenscherm) ---- */
+@media (min-width:1000px){
+  .homegrid{display:block;column-width:330px;column-gap:20px}
+  .homegrid > .card{display:block;width:100%;break-inside:avoid;margin:0 0 20px}
+  .homegrid > .card.note{transform:none}
+}
+@media (min-width:1400px){
+  .homegrid{column-width:auto;column-count:3}
+  .wrap{max-width:none;margin:0}
+  body{padding-right:max(32px,env(safe-area-inset-right,0px))}
+  main{padding-block:12px}
+  .hello{font-size:44px}
+}
+@media (min-width:1700px){ body{zoom:1.15} }
+@media (min-width:2300px){ .homegrid{column-count:4} body{zoom:1.35} }
 /* ---- school ---- */
 .prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
 .prog:first-of-type{border-top:0;padding-top:0}
@@ -899,7 +915,9 @@ let G = {events:[], calendars:[], updated:null, error:null, loading:false};
 try { const c = JSON.parse(store.get("bve-gcache") || "null"); if (c && c.events) G = {...G, ...c}; } catch {}
 const gUrl = () => (S.meta.google && S.meta.google.url) || "";
 const normName = x => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-const calMember = cal => S.members.find(m => normName(m.name) === normName(cal))?.id || "";
+// Een agenda hoort bij een lid als de naam overeenkomt, ook bij "Mama/Steffi" (deel van de naam) of via het veld "Google-agenda".
+const memberCalNames = m => [m.name, ...String(m.name || "").split(/\s*(?:\/|,|&|\+|\sen\s)\s*/i), ...String(m.agenda || "").split(",")].map(normName).filter(Boolean);
+const calMember = cal => { const c = normName(cal); return (S.members.find(m => normName(m.name) === c) || S.members.find(m => memberCalNames(m).includes(c)))?.id || ""; };
 const isMenuCal = cal => /menu/i.test(cal || "");
 async function loadGoogle(force){
   const url = gUrl();
@@ -1019,7 +1037,7 @@ const sec = (title, btn) => `<div class="sechead"><h2>${title}</h2>${btn || ""}<
 
 function evRow(e){
   const click = e.google ? `class="row click" data-gev="${e.id}"` : e.virtual ? `class="row"` : `class="row click" data-edit="events:${e.id}"`;
-  const sub = [e.span ? `t/m ${fmtDay(e.endDate)}` : "", e.time && e.endTime ? `tot ${e.endTime}` : "", e.location, !e.google && e.note ? e.note : ""].filter(Boolean).map(esc).join(" · ");
+  const sub = [e.span ? `t/m ${fmtDay(e.endDate)}` : "", e.time && e.endTime ? `tot ${e.endTime}` : "", e.location ? String(e.location).split(",")[0] : "", !e.google && e.note ? e.note : ""].filter(Boolean).map(esc).join(" · ");
   const who = (e.who || []).length ? avs(e.who) : e.google ? `<span class="pill n">${esc(e.cal)}</span>` : '<span class="pill n">Iedereen</span>';
   return `<div ${click}><span class="time">${esc(e.time || (e.allDay ? "Dag" : ""))}</span><div class="grow"><div class="t">${esc(e.title)}${e.google ? '<span class="gmark" title="Uit Google Agenda">G</span>' : ""}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>${who}</div>`;
 }
@@ -1034,7 +1052,7 @@ function eventRows(list){
 }
 
 function taskRows(list){
-  if (!list.length) return empty("Geen taken. Voeg er een toe met de knop hierboven.");
+  if (!list.length) return empty(tab === "huis" ? "Geen taken. Voeg er een toe met de knop hierboven." : "Geen open taken. 🎉");
   const rep = {daily:"Elke dag", weekly:"Elke week", none:"Eenmalig"};
   return `<div class="list">` + list.map(t => {
     const d = isDone(t), m = M(t.who), by = M(t.doneBy);
@@ -1077,7 +1095,7 @@ function vHome(){
   <p class="lead">${tasks.length} open ${tasks.length===1?"taak":"taken"} · ${ev.filter(e=>e.date===t).length} ${ev.filter(e=>e.date===t).length===1?"afspraak":"afspraken"} vandaag${menuFor(t) ? ` · vanavond: ${esc(menuFor(t))}` : ""}</p>
   ${me ? `<div class="card" style="margin-bottom:22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;--cc:${esc(me.color)}">${avatar(me,"lg")}<div class="grow" style="flex:1;min-width:0"><div class="label">${me.role==="kind"?"Kind":"Ouder"}</div><div style="font-weight:700;font-size:18px">${esc(me.name)}</div></div>
     <div><div class="label">Punten</div><div class="big num">${+me.points||0}</div></div>${me.allowance?`<div><div class="label">Zakgeld / week</div><div class="big num">${eur(me.allowance)}</div></div>`:""}</div>` : ""}
-  <div class="grid">
+  <div class="grid homegrid">
     <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Deze week</span> <button class="link" data-tab="agenda">Agenda</button></h3>${eventRows(ev)}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span> <button class="link" data-tab="huis" data-sub="taken">Alle taken</button></h3>${taskRows(tasks.slice(0,7))}</div>
     ${kidView() ? "" : `<div class="card" style="--cc:var(--c-geld)"><h3><span class="tag">Geld deze maand</span> <button class="link" data-tab="geld">Details</button></h3>
@@ -1322,7 +1340,7 @@ function vBende(){
 // ---------- forms ----------
 const memberOpts = (empty) => [["", empty], ...S.members.map(m => [m.id, m.name])];
 const FORMS = {
-  members: () => ({title:"Lid", fields:[{k:"name",l:"Naam",req:1},{k:"role",l:"Rol",t:"select",o:[["ouder","Ouder"],["kind","Kind"]]},{k:"color",l:"Kleur",t:"color"},{k:"birthday",l:"Verjaardag",t:"date"},{k:"allowance",l:"Zakgeld per week (€)",t:"number"}], def:{role:"kind", color:COLORS[S.members.length % COLORS.length]}}),
+  members: () => ({title:"Lid", fields:[{k:"name",l:"Naam",req:1},{k:"agenda",l:"Naam van zijn/haar Google-agenda (optioneel, bv. Steffi)"},{k:"role",l:"Rol",t:"select",o:[["ouder","Ouder"],["kind","Kind"]]},{k:"color",l:"Kleur",t:"color"},{k:"birthday",l:"Verjaardag",t:"date"},{k:"allowance",l:"Zakgeld per week (€)",t:"number"}], def:{role:"kind", color:COLORS[S.members.length % COLORS.length]}}),
   events: (item) => { const cals = !item && gUrl() ? gWritable() : [];
     const defCal = (cals.find(c => calMember(c.name) === who) || cals.find(c => calMember(c.name)) || cals[0] || {}).name || "";
     return {title:"Afspraak", fields:[{k:"title",l:"Wat",req:1},{k:"date",l:"Datum",t:"date",req:1},{k:"time",l:"Uur (leeg = hele dag)",t:"time"},
