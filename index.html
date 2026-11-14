@@ -281,6 +281,7 @@ nav.tabs button{position:relative}
 .gmark{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--c-agenda);color:#1c1530;font-size:10px;font-weight:900;margin-left:6px;vertical-align:2px;border:1.5px solid var(--shade)}
 
 /* ---- school ---- */
+.mvbtns{display:flex;gap:4px}
 .smeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .smeta:empty{display:none}
 nav.tabs .sml{display:none}
@@ -784,7 +785,25 @@ function allEvents(){
 }
 
 // ---------- rendering ----------
+// ---------- volgorde van de bende ----------
+// Standaard: kinderen van groot naar klein, daarna de ouders. Met de pijltjes bij De bende kies je zelf (veld "order").
+const FAMILIE_VOLGORDE = ["Alexis", "Amylia", "Louize", "Hannah", "Loïc"];
+function memberRank(m){
+  if (m.order != null && m.order !== "") return +m.order;
+  const i = FAMILIE_VOLGORDE.findIndex(n => normName(n) === normName(m.name));
+  if (i >= 0) return 100 + i;
+  return (m.role === "kind" ? 200 : 300);
+}
+function sortMembers(){ S.members.sort((a, b) => memberRank(a) - memberRank(b) || String(a.name || "").localeCompare(String(b.name || ""), "nl")); }
+function moveMember(id, dir){
+  const list = [...S.members], i = list.findIndex(m => m.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  list.forEach((m, k) => { if (+m.order !== k || m.order == null) upd("members", m.id, {order: k}); });
+}
+
 function render(){
+  sortMembers();
   const oldLog = $("#chatlog"), oldTop = oldLog ? oldLog.scrollTop : 0, atBottom = !oldLog || oldLog.scrollHeight - oldLog.scrollTop - oldLog.clientHeight < 90;
   if (tab === "babbel" && mode !== "loading") store.set("bve-chat-seen", String(Date.now()));
   const unread = S.messages.filter(m => (m.at || 0) > chatSeen() && m.from !== who).length;
@@ -1031,7 +1050,7 @@ function vAdmin(){
 
 function vBende(){
   return sec("De bende", `<button class="btn" data-new="members">Lid toevoegen</button>`) +
-  (S.members.length ? `<div class="grid">${S.members.map(m=>`<div class="card" style="--cc:${esc(m.color)};background-image:linear-gradient(var(--cc) 0 46px,transparent 46px);padding-top:22px"><div style="display:flex;gap:12px;align-items:flex-end">${avatar(m,"lg")}<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:18px">${esc(m.name)}</div><div class="s" style="color:var(--muted)">${m.role==="kind"?"Kind":"Ouder"}${m.birthday?` · jarig op ${parse(m.birthday).toLocaleDateString("nl-BE",{day:"numeric",month:"long"})}`:""}</div></div><button class="btn ghost sm" data-edit="members:${m.id}">Bewerk</button></div>
+  (S.members.length ? `<div class="grid">${S.members.map(m=>`<div class="card" style="--cc:${esc(m.color)};background-image:linear-gradient(var(--cc) 0 46px,transparent 46px);padding-top:22px"><div style="display:flex;gap:12px;align-items:flex-end">${avatar(m,"lg")}<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:18px">${esc(m.name)}</div><div class="s" style="color:var(--muted)">${m.role==="kind"?"Kind":"Ouder"}${m.birthday?` · jarig op ${parse(m.birthday).toLocaleDateString("nl-BE",{day:"numeric",month:"long"})}`:""}</div></div>${kidView() ? "" : `<span class="mvbtns"><button class="btn ghost sm" data-mv="${m.id}|-1" aria-label="${esc(m.name)} naar voren" ${S.members[0] === m ? "disabled" : ""}>↑</button><button class="btn ghost sm" data-mv="${m.id}|1" aria-label="${esc(m.name)} naar achteren" ${S.members[S.members.length - 1] === m ? "disabled" : ""}>↓</button></span><button class="btn ghost sm" data-edit="members:${m.id}">Bewerk</button>`}</div>
     <div class="stat"><div><div class="label">Punten</div><div class="big num">${+m.points||0}</div></div>${m.allowance?`<div><div class="label">Zakgeld</div><div class="big num">${eur(m.allowance)}</div></div>`:""}<div><div class="label">Open taken</div><div class="big num">${S.tasks.filter(t=>t.who===m.id&&!isDone(t)).length}</div></div></div>
     ${+m.points?`<button class="btn ghost sm" data-redeem="${m.id}" style="margin-top:10px">Punten inwisselen</button>`:""}</div>`).join("")}</div>` : empty("Nog niemand. Voeg het eerste lid toe."))+
   `<div class="card" style="--cc:var(--c-home);margin-top:22px;max-width:640px"><h3><span class="tag">Deze tablet</span></h3>
@@ -1119,7 +1138,7 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = fals
 
 // ---------- events ----------
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-gev],[data-oef],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
+  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-gev],[data-oef],[data-mv],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
   if (!el) return;
   const d = el.dataset;
   if ("closeBg" in d) { if (e.target === el) closeSheet(); return; }
@@ -1131,6 +1150,7 @@ document.addEventListener("click", e => {
   if (d.msg) return openMsg(d.msg);
   if (d.gev) return openGEvent(d.gev);
   if (d.oef) return openOef(d.oef, d.for);
+  if (d.mv) { const [id, dir] = d.mv.split("|"); moveMember(id, +dir); return; }
   if (d.pick) { who = d.pick; store.set("bve-who", who); store.set("bve-picked", "1"); pushSync(); $("#picker").hidden = true; render(); return; }
   if (d.act === "install") { deferredInstall?.prompt(); deferredInstall?.userChoice.finally(() => { deferredInstall = null; render(); }); return; }
   if (d.act === "wall") return toggleWall();
