@@ -284,6 +284,32 @@ nav.tabs button{position:relative}
 .pchip.prof{background:var(--paper-2);border-style:dashed}
 .pchip.prof .label{margin-left:2px}
 .pdiv{flex:none;width:2px;align-self:stretch;background:var(--hair);border-radius:2px;margin:4px 2px}
+
+/* ---- gesprekken + foto's ---- */
+.chatwrap{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:900px){ .chatwrap{grid-template-columns:260px minmax(0,1fr);align-items:start} }
+.chatmain{min-width:0}
+.convs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px}
+.convs::-webkit-scrollbar{display:none}
+@media (min-width:900px){ .convs{flex-direction:column;overflow:visible;position:sticky;top:12px} }
+.conv{position:relative;display:flex;align-items:center;gap:10px;border:var(--bw) solid var(--line);background:var(--paper);border-radius:16px;padding:8px 12px 8px 8px;text-align:left;color:var(--ink);flex:none;min-width:0;box-shadow:2px 2px 0 var(--shade)}
+.conv .cv{display:flex;flex-direction:column;min-width:0}
+.conv .cv b{font-weight:900;white-space:nowrap}
+.conv .cv .s{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+@media (max-width:899px){ .conv .cv .s{display:none} }
+.conv.on{background:var(--sec);color:#1c1530;border-color:var(--shade)}
+.conv.on .cv .s{color:#1c1530}
+.conv .badge{top:-6px;right:-6px}
+.chathd{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:var(--bw) solid var(--line);background:var(--paper-2)}
+.chathd b{font-weight:900;flex:1}
+.photopick{display:grid;place-items:center;width:40px;height:40px;flex:none;border:2px solid var(--line);border-radius:12px;background:var(--paper);font-size:20px;cursor:pointer;position:relative}
+.photopick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.photopick:focus-within{outline:3px solid var(--sec)}
+.photobtn{border:2px solid var(--shade);border-radius:16px;padding:0;overflow:hidden;background:var(--paper-2);box-shadow:2px 2px 0 var(--shade);cursor:zoom-in;max-width:min(280px,70vw);margin-bottom:4px}
+.photobtn img{display:block;width:100%;min-height:120px;min-width:160px;object-fit:cover;background:var(--paper-2)}
+.photobtn img.ok{min-height:0;min-width:0}
+.photoview img,.sheet-photo{display:block;max-width:100%;max-height:70vh;margin:0 auto;border-radius:14px}
+.sheet-photo{max-height:40vh;margin-bottom:10px}
 /* ---- school ---- */
 .prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
 .prog:first-of-type{border-top:0;padding-top:0}
@@ -448,7 +474,8 @@ function sample(){
     {id:uid(), text:"Wie haalt Wout op na de training?", from:"m2", at:n0-3*H},
     {id:uid(), text:"Ik doe het", from:"m1", at:n0-3*H+120e3, react:{"👍":["m2"]}},
     {id:uid(), text:"Mag ik vrijdag bij Emma slapen?", from:"m3", at:n0-40*60e3},
-    {id:uid(), text:"🙏", from:"m3", at:n0-39*60e3}
+    {id:uid(), text:"🙏", from:"m3", at:n0-39*60e3},
+    {id:uid(), text:"", pm:"Papa, mag ik vanavond wat langer opblijven? 🙏", from:"m3", at:n0-20*60e3, chat:"dm:m1_m3", to:["m1","m3"]}
   ];
   S.meta = { menu:{ma:"Spaghetti",di:"Kip met rijst",wo:"Restjes",do:"Vis met puree",vr:"Frietjes",za:"Pizza",zo:"Stoofvlees"}, budget:{amount:1200} };
 }
@@ -589,30 +616,49 @@ function pushRow(){
   return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Pushmeldingen</div><div class="s">${txt}</div></div>${btns}</div>`;
 }
 
-// ---------- babbels (gezinschat) ----------
+// ---------- babbels (gezinschat + privé + foto's) ----------
 const EMO = ["👍","❤️","😂","😮","🙏","🎉"];
 let lastMsgAt = null, chatDraft = "", chatStick = true;
-const chatSeen = () => +(store.get("bve-chat-seen") || 0);
+let chatWith = store.get("bve-chat-with") || "all";           // "all" = algemeen, anders een lid-id
+const dmKey = (a, b) => "dm:" + [a, b].sort().join("_");
+const msgKey = m => m.chat || "all";
+const msgText = m => m.text || m.pm || "";
+const canSeeMsg = m => { const k = msgKey(m); return k === "all" || (who !== "all" && k.startsWith("dm:") && k.slice(3).split("_").includes(who)); };
+const curKey = () => (chatWith === "all" || who === "all" || !M(chatWith) || chatWith === who) ? "all" : dmKey(who, chatWith);
+const seenOf = k => +(store.get("bve-seen-" + k) || (k === "all" ? store.get("bve-chat-seen") : 0) || 0);
+const unreadOf = k => S.messages.filter(m => msgKey(m) === k && (m.at || 0) > seenOf(k) && m.from !== who).length;
+const visibleKeys = () => ["all", ...(who === "all" ? [] : S.members.filter(m => m.id !== who).map(m => dmKey(who, m.id)))];
+const unreadTotal = () => visibleKeys().reduce((n, k) => n + unreadOf(k), 0);
+const msgPreview = m => (m.photo ? "📷 " : "") + (msgText(m) || (m.photo ? "Foto" : ""));
 function onMessages(list){
   list.sort((a, b) => (a.at || 0) - (b.at || 0));
   S.messages = list;
   const newest = list.length ? list[list.length - 1].at || 0 : 0;
   if (lastMsgAt !== null) {
-    const fresh = list.filter(m => (m.at || 0) > lastMsgAt && m.from !== who);
+    const fresh = list.filter(m => (m.at || 0) > lastMsgAt && m.from !== who && canSeeMsg(m));
     if (fresh.length) {
-      const m = fresh[fresh.length - 1];
-      if (tab !== "babbel") toast(`${M(m.from)?.name || "Iemand"}: ${String(m.text || "").slice(0, 70)}`);
+      const m = fresh[fresh.length - 1], priv = msgKey(m) !== "all";
+      if (tab !== "babbel" || msgKey(m) !== curKey()) toast(`${M(m.from)?.name || "Iemand"}${priv ? " (privé)" : ""}: ${msgPreview(m).slice(0, 70)}`);
       pling([880, 1175]);
     }
   }
   lastMsgAt = Math.max(lastMsgAt || 0, newest);
   render();
 }
-function sendMsg(text){
-  text = String(text || "").trim(); if (!text) return;
+function msgBase(){
+  const k = curKey(), base = {from: who, at: Date.now(), pinned: false, chat: k};
+  if (k !== "all") base.to = k.slice(3).split("_");
+  return base;
+}
+function sendMsg(text, photo){
+  text = String(text || "").trim(); if (!text && !photo) return;
   if (who === "all" || !M(who)) { toast("Dit is het gezinsscherm. Kies eerst een profiel (De bende → Wisselen)."); return; }
   chatStick = true; chatDraft = "";
-  add("messages", {text: text.slice(0, 1000), from: who, at: Date.now(), pinned: false});
+  const m = msgBase();
+  // Privéberichten staan in "pm", zodat alleen de ontvanger er een melding van krijgt.
+  if (m.chat === "all") m.text = text.slice(0, 1000); else { m.text = ""; m.pm = text.slice(0, 1000); }
+  if (photo) m.photo = photo;
+  add("messages", m);
   if (mode !== "db") lastMsgAt = Date.now();
 }
 function toggleReact(id, e){
@@ -623,38 +669,104 @@ function toggleReact(id, e){
   if (ids.size) rx[e] = [...ids]; else delete rx[e];
   upd("messages", id, {react: rx});
 }
-const isEmojiOnly = t => /^(\p{Extended_Pictographic}|\u200d|\ufe0f|\s){1,8}$/u.test(t || "") && /\p{Extended_Pictographic}/u.test(t || "");
+// --- foto's: verkleind tot max. 1280 px en als aparte rij bewaard (geen extra instellingen nodig) ---
+const PHOTOS = new Map(), photoBusy = new Set();
+function shrinkImage(file){
+  return new Promise((ok, bad) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const max = 1280, sc = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      let q = .8, data = c.toDataURL("image/jpeg", q);
+      while (data.length > 700000 && q > .35) { q -= .1; data = c.toDataURL("image/jpeg", q); }
+      data.length > 950000 ? bad(new Error("te groot")) : ok(data);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); bad(new Error("geen foto")); };
+    img.src = url;
+  });
+}
+async function sendPhoto(file){
+  if (!file) return;
+  if (who === "all" || !M(who)) { toast("Dit is het gezinsscherm. Kies eerst een profiel (De bende → Wisselen)."); return; }
+  if (!/^image\//.test(file.type)) { toast("Dat is geen foto. Kies een afbeelding."); return; }
+  toast("Foto versturen…");
+  try {
+    const data = await shrinkImage(file), cap = ($("#cmsg")?.value || "").trim();
+    if ($("#cmsg")) $("#cmsg").value = ""; chatDraft = "";
+    let id;
+    if (mode === "db") { const {fs, fsM} = FB; id = (await fsM.addDoc(fsM.collection(fs, "photos"), {data, from: who, at: Date.now(), chat: curKey()})).id; }
+    else id = uid();
+    PHOTOS.set(id, data);
+    if ($("#cmsg")) $("#cmsg").value = "";
+    sendMsg(cap, id);
+  } catch (e) { toast("De foto versturen lukte niet. Probeer een kleinere foto of controleer je internet."); }
+}
+function stickPhoto(img){
+  if (img.dataset.st) return; img.dataset.st = 1;
+  img.addEventListener("load", () => { const log = $("#chatlog"); if (log && log.contains(img) && log.scrollHeight - log.scrollTop - log.clientHeight < img.clientHeight + 160) log.scrollTop = log.scrollHeight; });
+}
+async function loadPhotos(){
+  document.querySelectorAll("img[data-photo]").forEach(async img => {
+    stickPhoto(img);
+    const id = img.dataset.photo;
+    if (PHOTOS.has(id)) { if (img.src !== PHOTOS.get(id)) img.src = PHOTOS.get(id); img.classList.add("ok"); return; }
+    if (mode !== "db" || photoBusy.has(id)) return;
+    photoBusy.add(id);
+    try { const {fs, fsM} = FB; const d = await fsM.getDoc(fsM.doc(fs, "photos", id)); if (d.exists()) { PHOTOS.set(id, d.data().data); document.querySelectorAll(`img[data-photo="${id}"]`).forEach(x => { x.src = PHOTOS.get(id); x.classList.add("ok"); }); } }
+    catch {} finally { photoBusy.delete(id); }
+  });
+}
+function openPhoto(id){
+  const src = PHOTOS.get(id); if (!src) return;
+  showSheet(`<div class="photoview"><img src="${src}" alt="Foto"></div><div class="actions"><div class="r"><button class="btn ghost" data-close>Sluiten</button></div></div>`);
+}
+const isEmojiOnly = t => /^(\p{Extended_Pictographic}|‍|️|\s){1,8}$/u.test(t || "") && /\p{Extended_Pictographic}/u.test(t || "");
 function dayLabel(day){ return day === today() ? "Vandaag" : day === addDays(today(), -1) ? "Gisteren" : fmtDay(day); }
 function msgsHtml(list){
   let out = "", lastDay = "", lastFrom = "", lastAt = 0;
   list.forEach(m => {
-    const d = new Date(m.at || 0), day = ds(d);
+    const d = new Date(m.at || 0), day = ds(d), txt = msgText(m);
     if (day !== lastDay) { out += `<div class="daysep"><span>${dayLabel(day)}</span></div>`; lastFrom = ""; }
     const me = m.from === who, cont = m.from === lastFrom && (m.at - lastAt) < 5 * 60e3, snd = M(m.from);
     const reacts = Object.entries(m.react || {}).filter(([, ids]) => ids && ids.length);
     out += `<div class="msg ${me ? "me" : ""} ${cont ? "cont" : ""}">${me ? "" : `<div class="mav">${cont ? "" : avatar(snd)}</div>`}
-      <div class="mb">${!cont && !me ? `<div class="mname">${esc(snd?.name || "Iemand")}</div>` : ""}
-      <button class="bubble ${isEmojiOnly(m.text) ? "emo" : ""}" data-msg="${m.id}" style="--mc:${esc(snd?.color || "#c9c3dd")}">${esc(m.text)}${m.pinned ? '<span class="pinmark" title="Vastgezet"> 📌</span>' : ""}</button>
+      <div class="mb">${!cont && !me && msgKey(m) === "all" ? `<div class="mname">${esc(snd?.name || "Iemand")}</div>` : ""}
+      ${m.photo ? `<button class="photobtn" data-photo-open="${m.photo}" aria-label="Foto groot bekijken"><img data-photo="${m.photo}" alt="Foto van ${esc(snd?.name || "iemand")}"></button>` : ""}
+      ${txt || !m.photo ? `<button class="bubble ${isEmojiOnly(txt) ? "emo" : ""}" data-msg="${m.id}" style="--mc:${esc(snd?.color || "#c9c3dd")}">${esc(txt)}${m.pinned ? '<span class="pinmark" title="Vastgezet"> 📌</span>' : ""}</button>` : `<button class="react" data-msg="${m.id}" aria-label="Reageren op de foto">＋ reageer</button>`}
       <div class="mmeta"><span class="num">${pad(d.getHours())}:${pad(d.getMinutes())}</span>${reacts.map(([e, ids]) => `<button class="react ${ids.includes(who) ? "on" : ""}" data-react="${m.id}|${e}" title="${esc(ids.map(i => M(i)?.name).filter(Boolean).join(", "))}">${e} ${ids.length}</button>`).join("")}</div></div></div>`;
     lastDay = day; lastFrom = m.from; lastAt = m.at || 0;
   });
   return out;
 }
+function convList(){
+  if (who === "all") return "";
+  const items = [{id: "all", key: "all", name: "De bende", av: '<span class="av all-av">★</span>'}, ...S.members.filter(m => m.id !== who).map(m => ({id: m.id, key: dmKey(who, m.id), name: m.name, av: avatar(m)}))];
+  return `<div class="convs" role="tablist" aria-label="Gesprekken">${items.map(it => {
+    const last = S.messages.filter(m => msgKey(m) === it.key).slice(-1)[0], n = unreadOf(it.key);
+    return `<button class="conv ${curKey() === it.key ? "on" : ""}" data-chat="${it.id}" role="tab" aria-selected="${curKey() === it.key}">${it.av}<span class="cv"><b>${esc(it.name)}</b><span class="s">${last ? esc((last.from === who ? "Jij: " : "") + msgPreview(last)).slice(0, 40) : it.id === "all" ? "Iedereen samen" : "Privé"}</span></span>${n ? `<span class="badge num">${n > 9 ? "9+" : n}</span>` : ""}</button>`;
+  }).join("")}</div>`;
+}
 function vChat(){
-  const me = who !== "all" ? M(who) : null, list = S.messages, pinned = list.filter(m => m.pinned);
+  const me = who !== "all" ? M(who) : null, k = curKey(), list = S.messages.filter(m => msgKey(m) === k), pinned = list.filter(m => m.pinned);
+  const other = k === "all" ? null : M(chatWith);
   return `<div class="sechead chathead"><h2>Babbels</h2><span class="s" style="color:var(--muted);font-weight:800">Tik op een bericht om te reageren of vast te zetten</span></div>
-  ${pinned.length ? `<div class="pinbar">${pinned.map(m => `<button class="pin" data-msg="${m.id}">${avatar(M(m.from))}<span class="pt">${esc(m.text)}</span><span class="label">Prikbord</span></button>`).join("")}</div>` : ""}
-  <div class="card chat"><div class="chatlog" id="chatlog">${list.length ? msgsHtml(list) : `<div class="empty" style="margin:auto">Nog geen berichten. Zeg eens hallo tegen de bende!</div>`}</div>
-  ${me ? `<form class="composer" id="cform">${avatar(me)}<input type="text" id="cmsg" value="${esc(chatDraft)}" placeholder="Bericht aan de bende…" autocomplete="off" maxlength="1000" enterkeyhint="send" aria-label="Bericht"><button class="btn">Stuur</button></form>
+  <div class="chatwrap">${convList()}
+  <div class="chatmain">
+  ${pinned.length ? `<div class="pinbar">${pinned.map(m => `<button class="pin" data-msg="${m.id}">${avatar(M(m.from))}<span class="pt">${esc(msgPreview(m))}</span><span class="label">Prikbord</span></button>`).join("")}</div>` : ""}
+  <div class="card chat"><div class="chathd">${other ? `${avatar(other)}<b>${esc(other.name)}</b><span class="pill n">🔒 privé</span>` : `<span class="av all-av">★</span><b>De bende</b><span class="pill n">iedereen</span>`}</div>
+  <div class="chatlog" id="chatlog">${list.length ? msgsHtml(list) : `<div class="empty" style="margin:auto">${other ? `Nog geen berichten met ${esc(other.name)}. Alleen jullie twee zien dit gesprek.` : "Nog geen berichten. Zeg eens hallo tegen de bende!"}</div>`}</div>
+  ${me ? `<form class="composer" id="cform">${avatar(me)}<label class="photopick" title="Foto sturen"><input type="file" id="cphoto" accept="image/*" aria-label="Foto sturen">📷</label><input type="text" id="cmsg" value="${esc(chatDraft)}" placeholder="${other ? `Bericht aan ${esc(other.name)}…` : "Bericht aan de bende…"}" autocomplete="off" maxlength="1000" enterkeyhint="send" aria-label="Bericht"><button class="btn">Stuur</button></form>
     <div class="quickemo">${EMO.concat(["🍕","🚗","🏠"]).map(e => `<button type="button" data-qemo="${e}" aria-label="Stuur ${e}">${e}</button>`).join("")}</div>`
-  : `<div class="whoask"><b>Dit is het gezinsscherm.</b> Om te babbelen kies je een profiel (met de ouderpincode).<div class="chips-row">${S.members.map(m => `<button class="pchip" data-pick="${m.id}" data-gate="1">${avatar(m)}${esc(m.name)}</button>`).join("")}</div></div>`}</div>`;
+  : `<div class="whoask"><b>Dit is het gezinsscherm.</b> Hier lees je alleen het algemene gesprek. Om te babbelen kies je een profiel (met de ouderpincode).<div class="chips-row">${S.members.map(m => `<button class="pchip" data-pick="${m.id}" data-gate="1">${avatar(m)}${esc(m.name)}</button>`).join("")}</div></div>`}</div>
+  </div></div>`;
 }
 function openMsg(id){
-  const m = S.messages.find(x => x.id === id); if (!m) return;
+  const m = S.messages.find(x => x.id === id); if (!m || !canSeeMsg(m)) return;
   const snd = M(m.from), d = new Date(m.at || 0);
   showSheet(`<h3><span>Bericht</span> van ${esc(snd?.name || "iemand")}</h3>
-    <p class="sheet-quote">${esc(m.text)}</p><p class="s" style="color:var(--muted);margin:-4px 0 12px;font-weight:700">${dayLabel(ds(d))} om ${pad(d.getHours())}:${pad(d.getMinutes())}</p>
-    ${who !== "all" && M(who) ? `<div class="emo-row">${EMO.map(e => `<button data-react="${m.id}|${e}" class="${(m.react?.[e] || []).includes(who) ? "on" : ""}" aria-label="Reageer met ${e}">${e}</button>`).join("")}</div>` : `<p class="s" style="font-weight:700">Kies bovenaan wie je bent om te reageren.</p>`}
+    ${msgText(m) ? `<p class="sheet-quote">${esc(msgText(m))}</p>` : ""}${m.photo && PHOTOS.has(m.photo) ? `<img class="sheet-photo" src="${PHOTOS.get(m.photo)}" alt="Foto">` : ""}<p class="s" style="color:var(--muted);margin:-4px 0 12px;font-weight:700">${dayLabel(ds(d))} om ${pad(d.getHours())}:${pad(d.getMinutes())}</p>
+    ${who !== "all" && M(who) ? `<div class="emo-row">${EMO.map(e => `<button data-react="${m.id}|${e}" class="${(m.react?.[e] || []).includes(who) ? "on" : ""}" aria-label="Reageer met ${e}">${e}</button>`).join("")}</div>` : `<p class="s" style="font-weight:700">Kies een profiel om te reageren.</p>`}
     <div class="actions"><button class="btn ghost" data-pin="${m.id}">${m.pinned ? "Van het prikbord halen" : "Op het prikbord zetten"}</button>${m.from === who ? `<button class="btn danger" data-delmsg="${m.id}">Verwijderen</button>` : ""}<div class="r"><button class="btn ghost" data-close>Sluiten</button></div></div>`);
 }
 function sizeChat(){
@@ -686,11 +798,11 @@ function renderWall(){
       <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Vandaag</span></h3>${ev.length ? eventRows(ev) : empty("Niets gepland vandaag.")}
         ${nxt.length ? `<div class="label" style="margin-top:14px">Straks</div>${nxt.map(e => `<div class="row"><span class="time" style="width:auto;min-width:70px;text-transform:capitalize">${fmtDay(e.date)}</span><div class="grow t">${esc(e.title)}</div>${avs(e.who)}</div>`).join("")}` : ""}</div>
       <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Babbels</span> <button class="link" data-tab="babbel">Naar de chat</button></h3>
-      ${S.messages.filter(m => m.pinned).slice(-2).map(m => `<button class="pin" data-msg="${m.id}" style="width:100%;margin-bottom:8px">${avatar(M(m.from))}<span class="pt">${esc(m.text)}</span></button>`).join("")}
-      ${S.messages.length ? `<div class="list">${S.messages.slice(-3).map(m => `<div class="row click" data-tab="babbel">${avatar(M(m.from))}<div class="grow"><div class="t" style="font-weight:700">${esc(String(m.text).slice(0, 90))}</div><div class="s">${esc(M(m.from)?.name || "Iemand")} · ${dayLabel(ds(new Date(m.at || 0)))}</div></div></div>`).join("")}</div>` : empty("Nog geen berichten.")}</div>
+      ${S.messages.filter(m => m.pinned && msgKey(m) === "all").slice(-2).map(m => `<button class="pin" data-msg="${m.id}" style="width:100%;margin-bottom:8px">${avatar(M(m.from))}<span class="pt">${esc(msgPreview(m))}</span></button>`).join("")}
+      ${S.messages.some(canSeeMsg) ? `<div class="list">${S.messages.filter(canSeeMsg).slice(-3).map(m => `<div class="row click" data-tab="babbel">${avatar(M(m.from))}<div class="grow"><div class="t" style="font-weight:700">${esc(msgPreview(m).slice(0, 90))}</div><div class="s">${esc(M(m.from)?.name || "Iemand")}${msgKey(m) !== "all" ? " · 🔒 privé" : ""} · ${dayLabel(ds(new Date(m.at || 0)))}</div></div></div>`).join("")}</div>` : empty("Nog geen berichten.")}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span></h3>${taskRows(tasks)}</div>
       <div class="card note"><h3><span class="tag">Vanavond eten we</span></h3><div class="big">${esc(menuFor(t) || "Nog een verrassing")}</div>
-        ${S.messages.some(m => m.pinned) ? `<div class="label" style="margin-top:14px">Prikbord</div>${S.messages.filter(m => m.pinned).slice(-3).map(m => `<div style="font-weight:800">${esc(M(m.from)?.name || "")}: ${esc(m.text)}</div>`).join("")}` : ""}<div class="label" style="margin-top:14px">Boodschappen</div><div style="font-weight:800">${S.shopping.filter(x => !x.done).map(x => esc(x.item)).join(" · ") || "Niets nodig"}</div></div>
+        ${S.messages.some(m => m.pinned && msgKey(m) === "all") ? `<div class="label" style="margin-top:14px">Prikbord</div>${S.messages.filter(m => m.pinned && msgKey(m) === "all").slice(-3).map(m => `<div style="font-weight:800">${esc(M(m.from)?.name || "")}: ${esc(msgPreview(m))}</div>`).join("")}` : ""}<div class="label" style="margin-top:14px">Boodschappen</div><div style="font-weight:800">${S.shopping.filter(x => !x.done).map(x => esc(x.item)).join(" · ") || "Niets nodig"}</div></div>
     </div>`;
 }
 async function toggleWall(){
@@ -824,8 +936,8 @@ function moveMember(id, dir){
 function render(){
   sortMembers();
   const oldLog = $("#chatlog"), oldTop = oldLog ? oldLog.scrollTop : 0, atBottom = !oldLog || oldLog.scrollHeight - oldLog.scrollTop - oldLog.clientHeight < 90;
-  if (tab === "babbel" && mode !== "loading") store.set("bve-chat-seen", String(Date.now()));
-  const unread = S.messages.filter(m => (m.at || 0) > chatSeen() && m.from !== who).length;
+  if (tab === "babbel" && mode !== "loading") store.set("bve-seen-" + curKey(), String(Date.now()));
+  const unread = unreadTotal();
   const ae = document.activeElement, keepId = ae && ae.id && ae.closest && ae.closest("#main") ? ae.id : null, keepVal = keepId ? ae.value : null;
   document.body.dataset.sec = tab;
   $("#today").textContent = fmtLong(today());
@@ -844,6 +956,7 @@ function render(){
   const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, school:vSchool, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
+  loadPhotos();
   const log = $("#chatlog");
   if (log) { sizeChat(); log.scrollTop = (chatStick || atBottom) ? log.scrollHeight : oldTop; chatStick = false; }
 }
@@ -1198,15 +1311,17 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = fals
 
 // ---------- events ----------
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-gev],[data-oef],[data-mv],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
+  const el = e.target.closest("[data-who],[data-tab],[data-sub],[data-new],[data-edit],[data-del],[data-menu],[data-month],[data-deposit],[data-redeem],[data-copy],[data-pick],[data-act],[data-gev],[data-oef],[data-mv],[data-chat],[data-photo-open],[data-msg],[data-react],[data-pin],[data-delmsg],[data-qemo],#clearShop,#setBudget,[data-close],[data-close-bg]");
   if (!el) return;
   const d = el.dataset;
   if ("closeBg" in d) { if (e.target === el) closeSheet(); return; }
   if ("close" in d) return closeSheet();
   if (d.react) { const [id, em] = d.react.split("|"); toggleReact(id, em); if (el.closest("#modal")) closeSheet(); return; }
   if (d.pin) { const m = S.messages.find(x => x.id === d.pin); closeSheet(); if (m) { upd("messages", m.id, {pinned: !m.pinned}); toast(m.pinned ? "Van het prikbord gehaald" : "Op het prikbord gezet"); } return; }
-  if (d.delmsg) { if (el.dataset.armed) { closeSheet(); del("messages", d.delmsg); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
+  if (d.delmsg) { if (el.dataset.armed) { closeSheet(); const mm = S.messages.find(x => x.id === d.delmsg); if (mm && mm.photo && mode === "db") FB.fsM.deleteDoc(FB.fsM.doc(FB.fs, "photos", mm.photo)).catch(() => {}); del("messages", d.delmsg); } else { el.dataset.armed = 1; el.textContent = "Zeker? Tik nog eens"; } return; }
   if (d.qemo) { sendMsg(d.qemo); return; }
+  if (d.chat) { chatWith = d.chat; store.set("bve-chat-with", chatWith); chatStick = true; chatDraft = ""; render(); return; }
+  if (d.photoOpen) return openPhoto(d.photoOpen);
   if (d.msg) return openMsg(d.msg);
   if (d.gev) return openGEvent(d.gev);
   if (d.oef) return openOef(d.oef, d.for);
@@ -1249,13 +1364,14 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target;
+  if (t.id === "cphoto") { sendPhoto(t.files && t.files[0]); t.value = ""; return; }
   if (t.dataset.task) toggleTask(t.dataset.task);
   if (t.dataset.school) toggleSchool(t.dataset.school);
   if (t.dataset.shop) upd("shopping", t.dataset.shop, {done: t.checked});
 });
 document.addEventListener("input", e => { if (e.target.id === "cmsg") chatDraft = e.target.value; });
 document.addEventListener("submit", e => {
-  if (e.target.id === "cform") { e.preventDefault(); const inp = $("#cmsg"); sendMsg(inp.value); inp.value = ""; chatDraft = ""; inp.focus(); return; }
+  if (e.target.id === "cform") { e.preventDefault(); const inp = $("#cmsg"), v = inp.value; inp.value = ""; chatDraft = ""; sendMsg(v); const ni = $("#cmsg"); if (ni) { ni.value = ""; ni.focus(); } return; }
   if (e.target.id !== "qform") return;
   e.preventDefault();
   const inp = $("#qitem"), v = inp.value.trim(); if (!v) return;

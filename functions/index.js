@@ -52,10 +52,16 @@ async function send(list, title, body, hash, tag, type) {
 
 exports.nieuwBericht = onDocumentCreated("messages/{id}", async event => {
   const m = event.data && event.data.data();
-  if (!m || !m.text) return;
+  if (!m) return;
+  const tekst = String(m.text || m.pm || "");
+  const body = (m.photo ? "📷 " : "") + (tekst || (m.photo ? "Foto" : ""));
+  if (!body) return;
+  // Privégesprek ("dm:<id>_<id>"): alleen de ontvanger krijgt een melding.
+  const prive = typeof m.chat === "string" && m.chat.startsWith("dm:");
+  const ontvangers = prive ? m.chat.slice(3).split("_").filter(id => id !== m.from) : null;
   const van = m.from ? (await db.collection("members").doc(m.from).get()).data() : null;
-  const lijst = await tokens(t => t.msgs !== false && t.who !== m.from);
-  await send(lijst, `💬 ${van ? van.name : "De bende"}`, String(m.text).slice(0, 180), "babbel", "babbel", "chat");
+  const lijst = await tokens(t => t.msgs !== false && t.who !== m.from && (!prive || ontvangers.includes(t.who)));
+  await send(lijst, `💬 ${van ? van.name : "De bende"}${prive ? " (privé)" : ""}`, body.slice(0, 180), "babbel", prive ? "dm-" + m.chat : "babbel", "chat");
 });
 
 exports.agendaHerinnering = onSchedule({ schedule: "every 10 minutes", timeZone: TZ }, async () => {
