@@ -1056,6 +1056,8 @@ function memberRank(m){
   if (i >= 0) return 100 + i;
   return (m.role === "kind" ? 200 : 300);
 }
+// Oefensterren: het hoogste van de teller op het lid en de som van alle oefeningen (gesynchroniseerd per toestel).
+const oefStars = m => Math.max(+m.oefenSterren || 0, S.oefenstate.filter(x => x.who === m.id).reduce((n, x) => n + (+x.stars || 0), 0));
 function sortMembers(){ S.members.sort((a, b) => memberRank(a) - memberRank(b) || String(a.name || "").localeCompare(String(b.name || ""), "nl")); }
 function moveMember(id, dir){
   const list = [...S.members], i = list.findIndex(m => m.id === id), j = i + dir;
@@ -1149,13 +1151,13 @@ function vHome(){
   const docs = S.docs.filter(mine("who")).filter(x => x.expires && daysBetween(t, x.expires) <= 60).sort((a,b) => a.expires.localeCompare(b.expires));
   const ms = monthStats(), budget = +S.meta.budget?.amount || 0, pct = budget ? Math.min(100, ms.spent / budget * 100) : 0;
   const open = S.shopping.filter(x => !x.done);
-  const kids = [...S.members].filter(m => (+m.points||0) > 0 || m.role === "kind").sort((a,b) => (+b.points||0) - (+a.points||0));
+  const kids = [...S.members].filter(m => (+m.points||0) > 0 || oefStars(m) > 0 || m.role === "kind").sort((a,b) => ((+b.points||0) + oefStars(b)) - ((+a.points||0) + oefStars(a)) || memberRank(a) - memberRank(b));
   const dayKey = ["zo","ma","di","wo","do","vr","za"][new Date().getDay()];
   const hr = new Date().getHours(), greet = hr < 6 ? "Hallo nachtuil" : hr < 12 ? "Goeiemorgen" : hr < 18 ? "Goeiemiddag" : "Goeienavond";
   return `<p class="hello">${greet}, <span>${me ? esc(me.name) : "bende"}</span>!</p>
   <p class="lead">${tasks.length} open ${tasks.length===1?"taak":"taken"} · ${ev.filter(e=>e.date===t).length} ${ev.filter(e=>e.date===t).length===1?"afspraak":"afspraken"} vandaag${menuFor(t) ? ` · vanavond: ${esc(menuFor(t))}` : ""}</p>
   ${me ? `<div class="card" style="margin-bottom:22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;--cc:${esc(me.color)}">${avatar(me,"lg")}<div class="grow" style="flex:1;min-width:0"><div class="label">${me.role==="kind"?"Kind":"Ouder"}</div><div style="font-weight:700;font-size:18px">${esc(me.name)}</div></div>
-    <div><div class="label">Punten</div><div class="big num">${+me.points||0}</div></div>${me.allowance?`<div><div class="label">Zakgeld / week</div><div class="big num">${eur(me.allowance)}</div></div>`:""}</div>` : ""}
+    <div><div class="label">Punten</div><div class="big num">🏠 ${+me.points||0}</div></div><div><div class="label">Oefensterren</div><div class="big num">⭐ ${oefStars(me)}</div></div>${me.allowance?`<div><div class="label">Zakgeld / week</div><div class="big num">${eur(me.allowance)}</div></div>`:""}</div>` : ""}
   <div class="grid homegrid">
     <div class="card" style="--cc:var(--c-agenda)"><h3><span class="tag">Deze week</span> <button class="link" data-tab="agenda">Agenda</button></h3>${eventRows(ev)}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Te doen</span> <button class="link" data-tab="huis" data-sub="taken">Alle taken</button></h3>${taskRows(tasks.slice(0,7))}</div>
@@ -1166,7 +1168,7 @@ function vHome(){
     ${(() => { const sl = openSchool().filter(x => !x.due || daysBetween(today(), x.due) <= 7).slice(0, 5); return sl.length ? `<div class="card" style="--cc:var(--c-school)"><h3><span class="tag">School</span> <button class="link" data-tab="school">Alles</button></h3>${schoolRows(sl)}</div>` : ""; })()}
     <div class="card note" style="--cc:var(--c-huis)"><h3><span class="tag">Boodschappen</span> <button class="link" data-tab="huis" data-sub="winkel">Lijst</button></h3>${open.length ? `<div class="list">${open.slice(0,6).map(x=>`<div class="row"><div class="grow t">${esc(x.item)}</div>${x.qty?`<span class="s">${esc(x.qty)}</span>`:""}</div>`).join("")}</div>${open.length>6?`<p class="s" style="color:var(--muted);margin:6px 0 0">en nog ${open.length-6}</p>`:""}` : empty("Niets nodig. De kast is vol.")}</div>
     ${docs.length?`<div class="card" style="--cc:var(--c-admin)"><h3><span class="tag">Vervalt binnenkort</span> <button class="link" data-tab="admin">Admin</button></h3><div class="list">${docs.map(x=>`<div class="row click" data-edit="docs:${x.id}"><div class="grow"><div class="t">${esc(x.title)}</div><div class="s">${esc(x.kind||"")} · ${fmtDay(x.expires)}</div></div>${docStatus(x)}</div>`).join("")}</div></div>`:""}
-    ${kids.length?`<div class="card" style="--cc:var(--c-bende)"><h3><span class="tag">Puntenstand</span></h3>${kids.map((m,i)=>`<div class="rank"><span class="n num">${i+1}</span>${avatar(m)}<span style="flex:1;font-weight:600">${esc(m.name)}</span><span class="pill pts num">★ ${+m.points||0}</span></div>`).join("")}</div>`:""}
+    ${kids.length?`<div class="card" style="--cc:var(--c-bende)"><h3><span class="tag">Puntenstand</span></h3>${kids.map((m,i)=>`<div class="rank" style="gap:8px"><span class="n num">${i+1}</span>${avatar(m)}<span style="flex:1;font-weight:600">${esc(m.name)}</span><span class="pill n num" title="Punten van huistaken">🏠 ${+m.points||0}</span><span class="pill pts num" title="Sterren van oefeningen">⭐ ${oefStars(m)}</span></div>`).join("")}<p class="s" style="color:var(--muted);font-weight:700;margin:8px 0 0">🏠 punten van huistaken · ⭐ sterren van oefeningen</p></div>`:""}
   </div>`;
 }
 
@@ -1237,14 +1239,14 @@ function vSchool(){
   const t = today(), open = openSchool();
   const done = S.school.filter(schoolMine).filter(x => x.done && (!x.doneAt || daysBetween(x.doneAt, t) <= 14)).sort((a, b) => (b.doneAt || "").localeCompare(a.doneAt || ""));
   const kids = S.members.filter(m => m.role === "kind");
-  const stars = kids.filter(m => +m.oefenSterren);
+  const stars = kids.filter(m => oefStars(m) > 0);
   return sec(kidView() ? `School van ${esc(M(who).name)}` : "School", kidView() ? "" : `<button class="btn" data-new="school">Schooltaak toevoegen</button>`) +
   `<div class="grid">
     <div class="card"><h3><span class="tag">Te doen</span><span class="pill n num">${open.length}</span></h3>${schoolRows(open)}
       ${done.length ? `<details class="donebox"><summary>Afgewerkt (${done.length})</summary>${schoolRows(done)}</details>` : ""}</div>
     <div class="card" style="--cc:var(--c-huis)"><h3><span class="tag">Oefeningen</span></h3>
       <div class="oefgrid">${oefVisible().length ? oefVisible().map(o => { const om = oefMember(o); return `<button class="oeftile" data-oef="${o.id}"><span class="oefemo">${o.emoji}</span><b>${esc(o.title)}</b>${o.voor ? `<span class="oefwho">${om ? avatar(om) : ""} Voor ${esc(o.voor)}</span>` : ""}<span class="s">${esc(o.sub)}</span><span class="pill pts">Openen</span></button>`; }).join("") : empty("Nog geen oefeningen voor jou.")}</div>
-      ${stars.length ? `<div class="label" style="margin-top:14px">Oefensterren</div>${stars.sort((a, b) => b.oefenSterren - a.oefenSterren).map(m => `<div class="rank">${avatar(m)}<span style="flex:1;font-weight:800">${esc(m.name)}</span><span class="pill pts num">★ ${+m.oefenSterren}</span></div>`).join("")}` : `<p class="s" style="color:var(--muted);font-weight:700;margin:12px 0 0">Elke juiste oefening geeft een oefensterretje. Die tellen apart van de punten voor huistaken.</p>`}
+      ${stars.length ? `<div class="label" style="margin-top:14px">Oefensterren</div>${stars.sort((a, b) => oefStars(b) - oefStars(a)).map(m => `<div class="rank">${avatar(m)}<span style="flex:1;font-weight:800">${esc(m.name)}</span><span class="pill pts num">⭐ ${oefStars(m)}</span></div>`).join("")}` : `<p class="s" style="color:var(--muted);font-weight:700;margin:12px 0 0">Elke juiste oefening geeft een oefensterretje. Die tellen apart van de punten voor huistaken.</p>`}
     </div>
     ${progressCard()}
   </div>`;
@@ -1393,7 +1395,7 @@ function vAdmin(){
 function vBende(){
   return sec("De bende", `<button class="btn" data-new="members">Lid toevoegen</button>`) +
   (S.members.length ? `<div class="grid">${S.members.map(m=>`<div class="card" style="--cc:${esc(m.color)};background-image:linear-gradient(var(--cc) 0 46px,transparent 46px);padding-top:22px"><div style="display:flex;gap:12px;align-items:flex-end">${avatar(m,"lg")}<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:18px">${esc(m.name)}</div><div class="s" style="color:var(--muted)">${m.role==="kind"?"Kind":"Ouder"}${m.birthday?` · jarig op ${parse(m.birthday).toLocaleDateString("nl-BE",{day:"numeric",month:"long"})}`:""}</div></div>${kidView() ? "" : `<span class="mvbtns"><button class="btn ghost sm" data-mv="${m.id}|-1" aria-label="${esc(m.name)} naar voren" ${S.members[0] === m ? "disabled" : ""}>↑</button><button class="btn ghost sm" data-mv="${m.id}|1" aria-label="${esc(m.name)} naar achteren" ${S.members[S.members.length - 1] === m ? "disabled" : ""}>↓</button></span><button class="btn ghost sm" data-edit="members:${m.id}">Bewerk</button>`}</div>
-    <div class="stat"><div><div class="label">Punten</div><div class="big num">${+m.points||0}</div></div>${m.allowance?`<div><div class="label">Zakgeld</div><div class="big num">${eur(m.allowance)}</div></div>`:""}<div><div class="label">Open taken</div><div class="big num">${S.tasks.filter(t=>t.who===m.id&&!isDone(t)).length}</div></div></div>
+    <div class="stat"><div><div class="label">Punten</div><div class="big num">🏠 ${+m.points||0}</div></div><div><div class="label">Oefensterren</div><div class="big num">⭐ ${oefStars(m)}</div></div>${m.allowance?`<div><div class="label">Zakgeld</div><div class="big num">${eur(m.allowance)}</div></div>`:""}<div><div class="label">Open taken</div><div class="big num">${S.tasks.filter(t=>t.who===m.id&&!isDone(t)).length}</div></div></div>
     ${+m.points?`<button class="btn ghost sm" data-redeem="${m.id}" style="margin-top:10px">Punten inwisselen</button>`:""}</div>`).join("")}</div>` : empty("Nog niemand. Voeg het eerste lid toe."))+
   `<div class="card" style="--cc:var(--c-home);margin-top:22px;max-width:640px"><h3><span class="tag">Deze tablet</span></h3>
     <div class="list">
