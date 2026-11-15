@@ -32,7 +32,7 @@ async function tokens(filter) {
 }
 
 async function send(list, title, body, hash, tag, type) {
-  if (!list.length) return;
+  if (!list.length) return { tokens: 0, ok: 0, errors: [] };
   const res = await admin.messaging().sendEach(list.map(t => ({
     token: t.id,
     notification: { title, body },
@@ -42,12 +42,20 @@ async function send(list, title, body, hash, tag, type) {
       fcmOptions: { link: APP + (hash ? "#" + hash : "") }
     }
   })));
-  const dood = [];
+  const dood = [], errors = [];
   res.responses.forEach((r, i) => {
     const c = r.error && r.error.code;
-    if (!r.success && ["messaging/registration-token-not-registered", "messaging/invalid-registration-token", "messaging/invalid-argument"].includes(c)) dood.push(list[i].id);
+    if (!r.success) { errors.push(`${list[i].who || "?"}: ${c || "onbekend"}`); console.warn("push mislukt", list[i].who, c, r.error && r.error.message); }
+    // Alleen echt verlopen toestellen opruimen.
+    if (!r.success && ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"].includes(c)) dood.push(list[i].id);
   });
   await Promise.all(dood.map(id => db.collection("pushTokens").doc(id).delete()));
+  return { tokens: list.length, ok: res.successCount, errors: errors.slice(0, 10) };
+}
+
+// Laatste verzending bijhouden, zodat de app kan tonen of meldingen vertrekken.
+async function logStatus(kind, extra) {
+  try { await db.collection("meta").doc("pushStatus").set({ at: Date.now(), kind, ...extra }); } catch (e) { console.warn("pushStatus", e); }
 }
 
 exports.nieuwBericht = onDocumentCreated("messages/{id}", async event => {
@@ -61,7 +69,9 @@ exports.nieuwBericht = onDocumentCreated("messages/{id}", async event => {
   const ontvangers = prive ? m.chat.slice(3).split("_").filter(id => id !== m.from) : null;
   const van = m.from ? (await db.collection("members").doc(m.from).get()).data() : null;
   const lijst = await tokens(t => t.msgs !== false && t.who !== m.from && (!prive || ontvangers.includes(t.who)));
-  await send(lijst, `💬 ${van ? van.name : "De bende"}${prive ? " (privé)" : ""}`, body.slice(0, 180), "babbel", prive ? "dm-" + m.chat : "babbel", "chat");
+  const alle = (await db.collection("pushTokens").get()).size;
+  const res = await send(lijst, `💬 ${van ? van.name : "De bende"}${prive ? " (privé)" : ""}`, body.slice(0, 180), "babbel", prive ? "dm-" + m.chat : "babbel", "chat");
+  await logStatus("bericht", { van: m.from || "", prive, alleToestellen: alle, ...res });
 });
 
 exports.agendaHerinnering = onSchedule({ schedule: "every 10 minutes", timeZone: TZ }, async () => {
@@ -103,4 +113,14 @@ exports.agendaHerinnering = onSchedule({ schedule: "every 10 minutes", timeZone:
   // oude logregels opruimen
   const oud = await db.collection("pushLog").where("at", "<", nu - 3 * 864e5).limit(200).get();
   await Promise.all(oud.docs.map(d => d.ref.delete()));
+});
+
+// Testmelding vanuit de app (De bende → Deze tablet → Testmelding): stuurt naar dat ene toestel.
+exports.testMelding = onDocumentCreated("pushTest/{id}", async event => {
+  const d = event.data && event.data.data();
+  if (!d || !d.token) return;
+  const tok = await db.collection("pushTokens").doc(d.token).get();
+  if (!tok.exists) { await event.data.ref.set({ done: true, ok: 0, error: "toestel-niet-ingeschreven" }, { merge: true }); return; }
+  const res = await send([{ id: d.token, ...tok.data() }], "✅ Testmelding", "Meldingen werken op dit toestel.", "bende", "test-" + Date.now(), "test");
+  await event.data.ref.set({ done: true, ok: res.ok, error: res.errors[0] || "" }, { merge: true });
 });

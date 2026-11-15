@@ -358,6 +358,15 @@ body.chatfull nav.tabs{display:none}
 .scrollbtns button{width:clamp(48px,4.2vw,72px);height:clamp(48px,4.2vw,72px);border-radius:50%;border:var(--bw) solid var(--shade);background:var(--sec);color:#1c1530;font-size:clamp(18px,1.6vw,28px);font-weight:900;box-shadow:3px 3px 0 var(--shade);display:grid;place-items:center}
 .scrollbtns button:disabled{opacity:.35}
 @media (max-width:720px){ .scrollbtns{bottom:calc(86px + env(safe-area-inset-bottom,0px))} }
+
+/* ---- leesbevestiging ---- */
+.ticks{font-weight:900;letter-spacing:-.18em;color:var(--muted);display:inline-flex;align-items:baseline;gap:3px;padding-right:.18em}
+.ticks.some{color:var(--ink)}
+.ticks.read{color:#2b8ae2}
+.ticks small{font-size:10px;letter-spacing:0}
+.readlist{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.readlist .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px}
+.readlist .av{width:22px;height:22px;font-size:9px}
 /* ---- school ---- */
 .prog{padding:12px 0;max-width:760px;border-top:2px dashed var(--hair);display:grid;gap:8px}
 .prog:first-of-type{border-top:0;padding-top:0}
@@ -557,7 +566,7 @@ function startSync(){
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "messages"), fsM.orderBy("at", "desc"), fsM.limit(300)), snap => onMessages(snap.docs.map(d => ({id:d.id, ...d.data()}))), onErr);
   fsM.onSnapshot(fsM.query(fsM.collection(fs, "oefenlog"), fsM.where("at", ">", Date.now() - 60 * 864e5), fsM.orderBy("at", "desc"), fsM.limit(3000)), snap => { S.oefenlog = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
   COLS.filter(c => c !== "messages" && c !== "oefenlog").forEach(c => fsM.onSnapshot(fsM.collection(fs, c), snap => { S[c] = snap.docs.map(d => ({id:d.id, ...d.data()})); render(); if (c === "members") maybePicker(); }, onErr));
-  ["menu","budget","google","settings"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
+  ["menu","budget","google","settings","pushStatus"].forEach(k => fsM.onSnapshot(fsM.doc(fs, "meta", k), d => { S.meta[k] = d.exists() ? d.data() : (k === "budget" ? {amount:0} : {}); if (k === "google") loadGoogle(); render(); }, onErr));
 }
 function showLogin(){
   const el = $("#login"); el.hidden = false;
@@ -614,7 +623,7 @@ async function messagingInst(){
   msgM.onMessage(FB.msg, async p => {
     const n = p.notification || {};
     // App staat open maar niet vooraan (ander venster, geminimaliseerd): toch een pop-up tonen.
-    if (document.visibilityState !== "visible" || !document.hasFocus()) {
+    if (document.visibilityState !== "visible" || !document.hasFocus() || (p.data && p.data.type === "test")) {
       try { const reg = await navigator.serviceWorker.ready; await reg.showNotification(n.title || "Bende van ellende", {body: n.body || "", icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: (p.data && p.data.type) || "bende", renotify: true, data: {link: p.fcmOptions?.link || ""}}); } catch {}
       return;
     }
@@ -664,9 +673,27 @@ function pushRow(){
   else if (Notification.permission === "denied") txt = "Geblokkeerd. Sta meldingen toe in de instellingen van je toestel.";
   else if (pushToken()) {
     txt = "Aan voor dit toestel" + (who === "all" ? " (gezinsscherm: alle meldingen)." : ` (voor ${esc(M(who)?.name || "")}).`);
-    btns = `<button class="btn ghost sm" data-act="pmsgs">Berichten: ${pushPref("msgs") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="pagenda">Afspraken: ${pushPref("agenda") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="poff">Uitzetten</button>`;
+    btns = `<button class="btn ghost sm" data-act="pmsgs">Berichten: ${pushPref("msgs") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="pagenda">Afspraken: ${pushPref("agenda") ? "aan" : "uit"}</button><button class="btn ghost sm" data-act="ptest">Testmelding</button><button class="btn ghost sm" data-act="poff">Uitzetten</button>`;
   } else { txt = "Krijg een melding bij nieuwe berichten en een uur voor een afspraak, ook als de app dicht is."; btns = `<button class="btn sm" data-act="pon">Aanzetten</button>`; }
-  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Pushmeldingen</div><div class="s">${txt}</div></div>${btns}</div>`;
+  const ps = S.meta.pushStatus;
+  const last = ps && ps.at ? `<div class="s" style="margin-top:4px">Laatste melding: ${whenTxt(ps.at)} · ${ps.kind === "bericht" ? `bericht van ${esc(M(ps.van)?.name || "iemand")}${ps.prive ? " (privé)" : ""}` : esc(ps.kind || "")} · naar ${+ps.tokens || 0} van ${+ps.alleToestellen || 0} ingeschreven toestellen, ${+ps.ok || 0} aangekomen${ps.errors && ps.errors.length ? ` · fouten: ${esc(ps.errors.join(", "))}` : ""}</div>` : "";
+  return `<div class="row" style="flex-wrap:wrap"><div class="grow" style="min-width:200px"><div class="t">Pushmeldingen</div><div class="s">${txt}</div>${last}</div>${btns}</div>`;
+}
+async function pushTest(retry){
+  const token = pushToken(); if (!token || mode !== "db") return;
+  toast("Testmelding versturen…");
+  const {fs, fsM} = FB;
+  try {
+    const ref = await fsM.addDoc(fsM.collection(fs, "pushTest"), {token, who, at: Date.now()});
+    let done = false;
+    const stop = fsM.onSnapshot(ref, async d => {
+      const x = d.data(); if (!x || !x.done || done) return; done = true; stop();
+      if (x.ok) toast("Testmelding verstuurd. Zie je hem niet binnen enkele seconden? Dan houdt dit toestel meldingen tegen (zie de tips).");
+      else if (x.error === "toestel-niet-ingeschreven" && !retry) { await registerToken(true).catch(() => {}); pushTest(true); }
+      else toast("De testmelding kwam niet aan: " + (x.error || "onbekende fout") + ". Zet meldingen uit en weer aan, en probeer opnieuw.");
+    });
+    setTimeout(() => { if (!done) { done = true; stop(); toast("Geen antwoord van de server. De meldingen-code is waarschijnlijk nog niet opnieuw uitgerold (firebase deploy)."); } }, 25000);
+  } catch (e) { toast("Testmelding versturen lukte niet. Controleer je internet."); }
 }
 
 // ---------- babbels (gezinschat + privé + foto's) ----------
@@ -776,6 +803,27 @@ function openPhoto(id){
 }
 const isEmojiOnly = t => /^(\p{Extended_Pictographic}|‍|️|\s){1,8}$/u.test(t || "") && /\p{Extended_Pictographic}/u.test(t || "");
 function dayLabel(day){ return day === today() ? "Vandaag" : day === addDays(today(), -1) ? "Gisteren" : fmtDay(day); }
+// Leesbevestiging: wie een gesprek open heeft, markeert de berichten van anderen als gelezen (readBy.<lid> = tijd).
+const readPending = new Set();
+function markRead(){
+  if (tab !== "babbel" || who === "all" || !M(who) || document.visibilityState !== "visible" || (isPhone() && !mChatOpen)) return;
+  const k = curKey();
+  S.messages.filter(m => msgKey(m) === k && m.from !== who && !(m.readBy && m.readBy[who]) && !readPending.has(m.id)).slice(-100).forEach(m => {
+    readPending.add(m.id);
+    if (mode === "db") { const {fs, fsM} = FB; fsM.updateDoc(fsM.doc(fs, "messages", m.id), {["readBy." + who]: Date.now()}).catch(() => {}).finally(() => setTimeout(() => readPending.delete(m.id), 5000)); }
+    else { m.readBy = {...(m.readBy || {}), [who]: Date.now()}; readPending.delete(m.id); saveDemo(); }
+  });
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") markRead(); });
+// Wie moet het bericht lezen? Privé: de andere persoon. Algemeen: alle andere gezinsleden.
+const readers = m => msgKey(m) === "all" ? S.members.filter(x => x.id !== m.from).map(x => x.id) : msgKey(m).slice(3).split("_").filter(id => id !== m.from);
+function ticks(m){
+  if (m.from !== who) return "";
+  const need = readers(m), got = need.filter(id => m.readBy && m.readBy[id]);
+  const all = need.length && got.length === need.length;
+  const label = all ? "Gelezen" + (msgKey(m) === "all" ? " door iedereen" : "") : got.length ? `Gelezen door ${got.length} van ${need.length}` : "Verstuurd";
+  return `<span class="ticks ${all ? "read" : got.length ? "some" : ""}" title="${label}" aria-label="${label}">${got.length ? "✓✓" : "✓"}${msgKey(m) === "all" && got.length && !all ? `<small>${got.length}</small>` : ""}</span>`;
+}
 function msgsHtml(list){
   let out = "", lastDay = "", lastFrom = "", lastAt = 0;
   list.forEach(m => {
@@ -787,7 +835,7 @@ function msgsHtml(list){
       <div class="mb">${!cont && !me && msgKey(m) === "all" ? `<div class="mname">${esc(snd?.name || "Iemand")}</div>` : ""}
       ${m.photo ? `<button class="photobtn" data-photo-open="${m.photo}" aria-label="Foto groot bekijken"><img data-photo="${m.photo}" alt="Foto van ${esc(snd?.name || "iemand")}"></button>` : ""}
       ${txt || !m.photo ? `<button class="bubble ${isEmojiOnly(txt) ? "emo" : ""}" data-msg="${m.id}" style="--mc:${esc(snd?.color || "#c9c3dd")}">${esc(txt)}${m.pinned ? '<span class="pinmark" title="Vastgezet"> 📌</span>' : ""}</button>` : `<button class="react" data-msg="${m.id}" aria-label="Reageren op de foto">＋ reageer</button>`}
-      <div class="mmeta"><span class="num">${pad(d.getHours())}:${pad(d.getMinutes())}</span>${reacts.map(([e, ids]) => `<button class="react ${ids.includes(who) ? "on" : ""}" data-react="${m.id}|${e}" title="${esc(ids.map(i => M(i)?.name).filter(Boolean).join(", "))}">${e} ${ids.length}</button>`).join("")}</div></div></div>`;
+      <div class="mmeta"><span class="num">${pad(d.getHours())}:${pad(d.getMinutes())}</span>${ticks(m)}${reacts.map(([e, ids]) => `<button class="react ${ids.includes(who) ? "on" : ""}" data-react="${m.id}|${e}" title="${esc(ids.map(i => M(i)?.name).filter(Boolean).join(", "))}">${e} ${ids.length}</button>`).join("")}</div></div></div>`;
     lastDay = day; lastFrom = m.from; lastAt = m.at || 0;
   });
   return out;
@@ -841,7 +889,9 @@ function openMsg(id){
   const m = S.messages.find(x => x.id === id); if (!m || !canSeeMsg(m)) return;
   const snd = M(m.from), d = new Date(m.at || 0);
   showSheet(`<h3><span>Bericht</span> van ${esc(snd?.name || "iemand")}</h3>
-    ${msgText(m) ? `<p class="sheet-quote">${esc(msgText(m))}</p>` : ""}${m.photo && PHOTOS.has(m.photo) ? `<img class="sheet-photo" src="${PHOTOS.get(m.photo)}" alt="Foto">` : ""}<p class="s" style="color:var(--muted);margin:-4px 0 12px;font-weight:700">${dayLabel(ds(d))} om ${pad(d.getHours())}:${pad(d.getMinutes())}</p>
+    ${msgText(m) ? `<p class="sheet-quote">${esc(msgText(m))}</p>` : ""}${m.photo && PHOTOS.has(m.photo) ? `<img class="sheet-photo" src="${PHOTOS.get(m.photo)}" alt="Foto">` : ""}${m.from === who ? (() => { const need = readers(m), got = need.filter(id => m.readBy && m.readBy[id]), not = need.filter(id => !(m.readBy && m.readBy[id]));
+      return `<div class="readlist">${got.map(id => `<span class="pill ok">${avatar(M(id))} ${esc(M(id)?.name || "")} · ${whenTxt(m.readBy[id])}</span>`).join("")}${not.map(id => `<span class="pill n">${avatar(M(id))} ${esc(M(id)?.name || "")} · nog niet gelezen</span>`).join("")}</div>`; })() : ""}
+    <p class="s" style="color:var(--muted);margin:-4px 0 12px;font-weight:700">${dayLabel(ds(d))} om ${pad(d.getHours())}:${pad(d.getMinutes())}</p>
     ${who !== "all" && M(who) ? `<div class="emo-row">${EMO.map(e => `<button data-react="${m.id}|${e}" class="${(m.react?.[e] || []).includes(who) ? "on" : ""}" aria-label="Reageer met ${e}">${e}</button>`).join("")}</div>` : `<p class="s" style="font-weight:700">Kies een profiel om te reageren.</p>`}
     <div class="actions"><button class="btn ghost" data-pin="${m.id}">${m.pinned ? "Van het prikbord halen" : "Op het prikbord zetten"}</button>${m.from === who ? `<button class="btn danger" data-delmsg="${m.id}">Verwijderen</button>` : ""}<div class="r"><button class="btn ghost" data-close>Sluiten</button></div></div>`);
 }
@@ -1038,7 +1088,7 @@ function render(){
   const V = {home:vHome, babbel:vChat, agenda:vAgenda, huis:vHuis, school:vSchool, geld:vGeld, admin:vAdmin, bende:vBende}[tab];
   $("#main").innerHTML = mode === "loading" || mode === "login" ? '<p class="lead">Even laden…</p>' : mode === "error" ? `<div class="card" style="--cc:var(--c-admin);max-width:520px"><h3><span class="tag">Geen verbinding</span></h3><p>De app kon niet opstarten. Controleer je internet en de gegevens in firebase-config.js, en open de app opnieuw.</p><button class="btn" onclick="location.reload()">Opnieuw proberen</button></div>` : V();
   if (keepId) { const el = document.getElementById(keepId); if (el) { el.value = keepVal; el.focus(); } }
-  loadPhotos(); pushOefState(); setTimeout(updScrollBtns, 50);
+  loadPhotos(); pushOefState(); markRead(); setTimeout(updScrollBtns, 50);
   const log = $("#chatlog");
   if (log) { sizeChat(); log.scrollTop = (chatStick || atBottom) ? log.scrollHeight : oldTop; chatStick = false; }
 }
@@ -1459,6 +1509,7 @@ document.addEventListener("click", e => {
   if (d.act === "sound") { soundOn = !soundOn; store.set("bve-sound", soundOn ? "1" : "0"); if (soundOn) pling(); render(); return; }
   if (d.act === "logout") return logout();
   if (d.act === "pon") return pushOn();
+  if (d.act === "ptest") return pushTest();
   if (d.act === "poff") return pushOff();
   if (d.act === "pmsgs") return pushToggle("msgs");
   if (d.act === "pagenda") return pushToggle("agenda");
