@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Breuken &amp; procenten · Amylia</title>
+<title>Breuken &amp; procenten · Alexis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -113,7 +113,7 @@ table.eq th{color:var(--brown);font-weight:900}
 <body>
 <header>
   <div class="wrap">
-    <h1>🍕 Breuken &amp; procenten · Amylia</h1>
+    <h1>🍕 Breuken &amp; procenten · Alexis</h1>
     <p>Uitleg, voorbeelden en oefeningen bij les 11, 12 en 13</p>
     <div class="players" id="players"></div>
   </div>
@@ -131,7 +131,7 @@ table.eq th{color:var(--brown);font-weight:900}
 
 <!-- START -->
 <section class="view" id="v-start">
-  <h2>Hallo Amylia! 👋</h2>
+  <h2>Hallo Alexis! 👋</h2>
   <p class="sub">Elke juiste oefening levert je 1 ⭐ op. Hoeveel sterren verzamel jij?</p>
   <div class="start-grid">
     <button class="tile" data-go="les11"><div class="emoji">💯</div><b>Les 11 · Procenten</b><span>% omzetten, deel van een geheel berekenen, vraagstukken</span></button>
@@ -356,6 +356,8 @@ table.eq th{color:var(--brown);font-weight:900}
 </div></main>
 
 <script>
+const NAME=(()=>{try{const n=(new URLSearchParams(location.search).get('speler')||'').trim().slice(0,40);return n||'Jij';}catch(e){return 'Jij';}})();
+
 /* ---------- helpers ---------- */
 const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -590,10 +592,10 @@ function renderLesson(lesson){
 }
 
 /* ---------- players & stars ---------- */
-const store={get(k,d){try{const v=localStorage.getItem('breuken-Amylia-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('breuken-Amylia-'+k,JSON.stringify(v));}catch(e){}}};
-let scores=store.get('scores',{Amylia:0}), best=store.get('best',{Amylia:null}), player='Amylia';
+const store={get(k,d){try{const v=localStorage.getItem('breuken-'+NAME+'-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('breuken-'+NAME+'-'+k,JSON.stringify(v));}catch(e){}}};
+let scores=store.get('scores',{[NAME]:0}), best=store.get('best',{[NAME]:null}), player=NAME;
 function renderPlayers(){
-  document.getElementById('players').innerHTML=['Amylia'].map(n=>`<button class="pl ${n===player?'on':''}" data-p="${n}">${n===player?'⭐ ':''}${n} <small>⭐ ${scores[n]||0}</small></button>`).join('');
+  document.getElementById('players').innerHTML=[NAME].map(n=>`<button class="pl ${n===player?'on':''}" data-p="${n}">${n===player?'⭐ ':''}${n} <small>⭐ ${scores[n]||0}</small></button>`).join('');
   const b=best[player];document.getElementById('best').textContent=b!=null?`Jouw beste testscore: ${b}/10`:'';
 }
 function addStar(){scores[player]=(scores[player]||0)+1;store.set('scores',scores);renderPlayers();
@@ -691,6 +693,9 @@ if(window.parent!==window){
   });
   bveSend({type:'bve-hello'});
 }
+
+/* naam van het kind invullen in titels */
+(function(){document.title=document.title.replace('Alexis',NAME);const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(n.nodeValue.includes('Alexis'))n.nodeValue=n.nodeValue.split('Alexis').join(NAME);}})();
 </script>
 </body>
 </html>

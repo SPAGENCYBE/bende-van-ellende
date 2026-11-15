@@ -334,6 +334,8 @@ textarea{font:inherit;width:100%;min-height:90px;border:2px solid #cfdcda;border
 </div></main>
 
 <script>
+const NAME=(()=>{try{const n=(new URLSearchParams(location.search).get('speler')||'').trim().slice(0,40);return n||'Jij';}catch(e){return 'Jij';}})();
+
 /* ===== helpers ===== */
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
@@ -460,7 +462,7 @@ function renderSet(th,i){const [title,pool,n]=THEMES[th][i];document.getElementB
 function renderTheme(th){const box=document.getElementById('sets-'+th);box.innerHTML='<h2 style="margin-top:28px">✏️ Oefenen</h2>'+THEMES[th].map((_,i)=>`<div class="set" id="set-${th}-${i}"></div>`).join('');THEMES[th].forEach((_,i)=>renderSet(th,i));}
 
 /* ===== stars ===== */
-const NAME='Alexis';
+/* NAME komt bovenaan uit ?speler= */
 const store={get(k,d){try{const v=localStorage.getItem('wo-'+NAME+'-'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('wo-'+NAME+'-'+k,JSON.stringify(v));}catch(e){}}};
 let stars=store.get('stars',0),best=store.get('best',null);
 function renderStars(){document.getElementById('stars').innerHTML=`<span>⭐ ${stars} sterren</span>${best!=null?`<span>🏆 beste test: ${best}/12</span>`:''}`;document.getElementById('best').textContent=best!=null?`Jouw beste testscore: ${best}/12`:'';}
@@ -526,6 +528,9 @@ if(window.parent!==window){
   });
   bveSend({type:'bve-hello'});
 }
+
+/* naam van het kind invullen in titels */
+(function(){document.title=document.title.replace('Alexis',NAME);const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(n.nodeValue.includes('Alexis'))n.nodeValue=n.nodeValue.split('Alexis').join(NAME);}})();
 </script>
 </body>
 </html>

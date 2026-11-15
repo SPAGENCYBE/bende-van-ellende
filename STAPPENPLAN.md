@@ -153,3 +153,13 @@ Behandel de web-app-link als een wachtwoord: wie hem heeft, kan jullie afspraken
 4. Open de app op elk toestel → **De bende → Deze tablet → Pushmeldingen → Aanzetten**.
 
 Je krijgt een melding bij een nieuw bericht in Babbels (niet van jezelf) en een uur voor elke afspraak met een uur, uit de app en uit Google Agenda. Per toestel kun je berichten of afspraken uitzetten.
+
+---
+
+## Nieuw (november 2026)
+
+- **Beloningswinkel** (De bende → Winkel): ouders zetten beloningen met een prijs in sterren. Saldo = punten van huistaken + oefensterren − ingewisseld. Een kind vraagt aan, een ouder keurt goed of af.
+- **Beurtrol**: bij een taak die elke dag of elke week terugkomt, kies je bij "Beurtrol" wie elkaar afwisselen.
+- **Oefeningen**: één bestand per vak in `oefeningen/`. Een nieuwe oefening = het bestand erbij zetten + één regel in `OEF_VAKKEN` in `index.html` (met de namen van de kinderen). Het bestand leest de naam uit `?speler=`.
+- **Muurstand**: weekoverzicht, avondeten, taken, prikbord, sterren en foto's uit Babbels als achtergrond.
+- **Meldingen voor ouders**: bij een grote test, een afgevinkte schooltaak en een vraag uit de winkel. Een kind krijgt een melding als zijn vraag goedgekeurd of afgewezen is. Per toestel aan/uit via "School & winkel".

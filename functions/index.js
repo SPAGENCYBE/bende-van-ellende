@@ -1,7 +1,7 @@
 // Bende van ellende: pushmeldingen
 // - nieuwBericht: melding naar de rest van de bende bij een nieuw bericht in Babbels
 // - agendaHerinnering: elke 10 minuten, melding een uur voor afspraken (app én Google Agenda)
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -123,4 +123,49 @@ exports.testMelding = onDocumentCreated("pushTest/{id}", async event => {
   if (!tok.exists) { await event.data.ref.set({ done: true, ok: 0, error: "toestel-niet-ingeschreven" }, { merge: true }); return; }
   const res = await send([{ id: d.token, ...tok.data() }], "✅ Testmelding", "Meldingen werken op dit toestel.", "bende", "test-" + Date.now(), "test");
   await event.data.ref.set({ done: true, ok: res.ok, error: res.errors[0] || "" }, { merge: true });
+});
+
+// ---------- School & winkel: meldingen naar ouders en kinderen ----------
+async function leden() { return (await db.collection("members").get()).docs.map(d => ({ id: d.id, ...d.data() })); }
+async function naarOuders(title, body, hash, tag) {
+  const L = await leden(), ouders = L.filter(m => m.role === "ouder").map(m => m.id);
+  const lijst = await tokens(t => t.school !== false && ouders.includes(t.who));
+  const res = await send(lijst, title, body, hash, tag, "school");
+  await logStatus("school", { tokens: res.tokens, ok: res.ok, errors: res.errors, alleToestellen: lijst.length });
+}
+async function naarLid(id, title, body, hash, tag) {
+  const lijst = await tokens(t => t.school !== false && t.who === id);
+  await send(lijst, title, body, hash, tag, "school");
+}
+
+// Grote test gemaakt → ouders
+exports.testGemaakt = onDocumentCreated("oefenlog/{id}", async event => {
+  const x = event.data && event.data.data();
+  if (!x || x.kind !== "test") return;
+  const kind = (await db.collection("members").doc(x.who).get()).data();
+  await naarOuders(`🏆 ${kind ? kind.name : "Een kind"} maakte de grote test`, `${x.titel || "Oefening"}: ${x.score}/${x.max || 10} in één keer juist`, "school", "test-" + x.who);
+});
+
+// Schooltaak afgevinkt door een kind → ouders
+exports.schooltaakKlaar = onDocumentUpdated("school/{id}", async event => {
+  const voor = event.data.before.data(), na = event.data.after.data();
+  if (!na || voor.done || !na.done || !na.who) return;
+  const kind = (await db.collection("members").doc(na.who).get()).data();
+  if (!kind || kind.role !== "kind") return;
+  await naarOuders(`✅ ${kind.name} is klaar`, `${na.kind ? na.kind + ": " : ""}${na.title}`, "school", "school-" + event.params.id);
+});
+
+// Beloning gevraagd → ouders
+exports.beloningGevraagd = onDocumentCreated("redeems/{id}", async event => {
+  const x = event.data && event.data.data();
+  if (!x || x.status !== "wacht") return;
+  const kind = (await db.collection("members").doc(x.who).get()).data();
+  await naarOuders(`🎁 ${kind ? kind.name : "Iemand"} wil iets inwisselen`, `${x.emoji || ""} ${x.title} · ⭐ ${x.cost}`, "bende", "redeem-" + event.params.id);
+});
+
+// Beloning goedgekeurd of afgewezen → kind
+exports.beloningBeslist = onDocumentUpdated("redeems/{id}", async event => {
+  const voor = event.data.before.data(), na = event.data.after.data();
+  if (!na || voor.status === na.status || na.status === "wacht") return;
+  await naarLid(na.who, na.status === "goed" ? "🎉 Goedgekeurd!" : "Helaas, afgewezen", na.status === "goed" ? `${na.emoji || ""} ${na.title}` : `${na.title}. Je krijgt je ⭐ ${na.cost} terug.`, "bende", "redeem-" + event.params.id);
 });
